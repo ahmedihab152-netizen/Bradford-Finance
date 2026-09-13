@@ -715,6 +715,7 @@ tr.bfApprovedByAmany>td{background:#dcfce7!important;color:#14532d!important;bor
   const safePrint=markup=>{const host=$('#printArea');host.innerHTML=markup;host.classList.remove('print-only');window.print();setTimeout(()=>{host.innerHTML='';host.classList.add('print-only')},300)};
   Object.assign(pages,{uat:'اختبار UAT للأدوار'});
   ['OWNER','FINANCE_MANAGER','ACCOUNTANT'].forEach(r=>{access[r]||(access[r]=[]);if(!access[r].includes('uat'))access[r].push('uat')});
+  access.DR_AMANY_APPROVER=['amany_approvals','security','support'];
   const transportRead=async(table,select='*')=>{let out=[],from=0;while(true){const r=await supabase.from(table).select(select).range(from,from+999);if(r.error)throw r.error;out.push(...(r.data||[]));if((r.data||[]).length<1000)break;from+=1000}return out};
   const trStatus=x=>x==='ACTIVE'?'نشط':x==='INACTIVE'?'غير نشط':x==='MAINTENANCE'?'صيانة':x==='SUSPENDED'?'موقوف':x==='CANCELLED'?'ملغي':x;
   function transportTabs(active){return '<div class="module-tabs">'+[['enrollments','اشتراكات الطلاب'],['routes','المسارات'],['vehicles','المركبات'],['staff','طاقم النقل']].map(x=>'<button class="btn '+(active===x[0]?'on':'ghost')+'" onclick="showTransportTab(\''+x[0]+'\')">'+x[1]+'</button>').join('')+'</div>'}
