@@ -4,8 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node tools/verify-static.mjs",
-    "test:static": "node tools/verify-static.mjs"
+    "test": "node --test tests/verify-backup.test.mjs && node tools/verify-static.mjs",
+    "test:unit": "node --test tests/verify-backup.test.mjs",
+    "test:static": "node tools/verify-static.mjs",
+    "verify:backup": "node tools/verify-backup.mjs"
   },
   "engines": {
     "node": ">=20"

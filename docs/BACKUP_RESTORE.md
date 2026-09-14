@@ -1,5 +1,17 @@
 # Backup and restore runbook
 
+## Independent integrity verification
+
+After downloading an OWNER export, verify it outside the browser before copying it to protected backup storage:
+
+```text
+npm run verify:backup -- Bradford_Finance_Backup_YYYY-MM-DD.json
+```
+
+The command recalculates SHA-256 from the exact JSON payload and verifies its UTF-8 byte size, table count, row count, table-array structure and Production label. A non-zero exit code means the file must not be used for restore. This integrity check detects corruption or alteration; it does not replace encryption, access controls, a database-native backup, Storage-object export, or an isolated restore test.
+
+Run `tools/phase1-preflight.sql` using a read-only SQL session before the backup and against the isolated restored database. Resolve every missing required object, duplicate account/year, orphaned account and RLS failure before applying Phase 1.
+
 ## Current production status — 2026-09-14
 
 The Supabase dashboard reports **Free Plan — scheduled backups unavailable**. `backup_manifests` and `restore_test_runs` currently contain no verified run. This is a hard migration release gate, not a cosmetic warning.

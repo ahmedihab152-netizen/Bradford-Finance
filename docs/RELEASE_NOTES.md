@@ -10,6 +10,8 @@ Added:
 - Backup/restore gate documenting that the current Supabase Free plan has no platform project backup.
 - Static verification for JavaScript syntax, canonical `index.html`, migration uniqueness, frontend secret patterns, localhost references and RLS declarations.
 - GitHub Actions verification with read-only repository permissions and no production credentials.
+- Independent backup-manifest verifier with automated tamper/count validation tests.
+- Read-only Phase 1 database preflight for required contracts, duplicate keys, orphaned accounts and RLS state.
 - Administrative runbook, role guides and evidence-based UAT checklist.
 - Admissions/Student Administration Phase 1 implementation design.
 
