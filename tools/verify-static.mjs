@@ -75,6 +75,13 @@ const hrSource = read('hr-operations.js');
 if (/\b(?:alert|prompt|confirm)\s*\(/.test(hrSource)) fail('HR operations use a native browser dialog');
 else pass('HR operations use application dialogs and toasts');
 
+if (!html.includes('window.forgot=()=>openM(') || /window\.forgot=async\(\)=>\{let e=prompt/.test(html)) fail('password recovery does not use the application dialog');
+else pass('password recovery uses the application dialog');
+if (!/id="modal"[^>]*role="dialog"[^>]*aria-modal="true"/.test(html)) fail('application modal lacks dialog accessibility attributes');
+else pass('application modal exposes dialog accessibility attributes');
+if (!html.includes('autocomplete="one-time-code"')) fail('MFA challenge lacks one-time-code autocomplete');
+else pass('MFA challenge supports one-time-code entry');
+
 const requiredReleaseDocs = [
   'docs/ADMIN_GUIDE.md',
   'docs/ROLE_GUIDES.md',
