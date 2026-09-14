@@ -67,6 +67,10 @@ for (const bundle of ['cashier.js', 'hr-operations.js']) {
   reference.test(html) ? pass(`${bundle} is cache-versioned`) : fail(`${bundle} is not cache-versioned`);
 }
 
+const cashierSource = read('cashier.js');
+if (/\b(?:alert|prompt|confirm)\s*\(/.test(cashierSource)) fail('cashier uses a native browser dialog');
+else pass('cashier uses application dialogs and toasts');
+
 const requiredReleaseDocs = [
   'docs/ADMIN_GUIDE.md',
   'docs/ROLE_GUIDES.md',
