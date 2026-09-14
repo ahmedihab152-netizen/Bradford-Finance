@@ -81,6 +81,8 @@ if (!/id="modal"[^>]*role="dialog"[^>]*aria-modal="true"/.test(html)) fail('appl
 else pass('application modal exposes dialog accessibility attributes');
 if (!html.includes('autocomplete="one-time-code"')) fail('MFA challenge lacks one-time-code autocomplete');
 else pass('MFA challenge supports one-time-code entry');
+if (/async function finAction\([^\n]*\b(?:alert|prompt|confirm)\s*\(/.test(html)) fail('financial approval workflow uses a native browser dialog');
+else pass('financial approval workflow uses application dialogs and toasts');
 
 const requiredReleaseDocs = [
   'docs/ADMIN_GUIDE.md',
