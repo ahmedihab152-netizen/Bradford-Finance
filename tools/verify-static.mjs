@@ -8,7 +8,7 @@ const pass = message => console.log(`PASS ${message}`);
 const fail = message => failures.push(message);
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 
-for (const file of ['cashier.js', 'hr-operations.js']) {
+for (const file of ['cashier.js', 'hr-operations.js', 'ig-exams.js']) {
   try {
     new vm.Script(read(file), { filename: file });
     pass(`${file} parses as JavaScript`);
@@ -29,7 +29,7 @@ inlineScripts.forEach((match, index) => {
 });
 if (!failures.some(item => item.startsWith('index inline'))) pass(`${inlineScripts.length} classic index.html scripts parse`);
 
-const sourceFiles = ['index.html', 'cashier.js', 'hr-operations.js'];
+const sourceFiles = ['index.html', 'cashier.js', 'hr-operations.js', 'ig-exams.js'];
 const combinedSource = sourceFiles.map(file => `${file}\n${read(file)}`).join('\n');
 const forbidden = [
   [/service[_-]?role/i, 'service-role reference in frontend'],
@@ -61,7 +61,7 @@ const missingRls = [...new Set(createdPublicTables)].filter(table =>
   !migrationSql.includes(`alter table public.${table} enable row level security`) && !dynamicallyProtected.has(table));
 missingRls.length ? fail(`created public tables without an RLS enable statement: ${missingRls.join(', ')}`) : pass('all locally created public tables have an RLS enable statement');
 
-for (const bundle of ['cashier.js', 'hr-operations.js']) {
+for (const bundle of ['cashier.js', 'hr-operations.js', 'ig-exams.js']) {
   const escaped = bundle.replace('.', '\\.');
   const reference = new RegExp(`${escaped}\\?v=[^"']+`);
   reference.test(html) ? pass(`${bundle} is cache-versioned`) : fail(`${bundle} is not cache-versioned`);
@@ -74,6 +74,14 @@ else pass('cashier uses application dialogs and toasts');
 const hrSource = read('hr-operations.js');
 if (/\b(?:alert|prompt|confirm)\s*\(/.test(hrSource)) fail('HR operations use a native browser dialog');
 else pass('HR operations use application dialogs and toasts');
+
+const igSource = read('ig-exams.js');
+if (/\b(?:alert|prompt|confirm)\s*\(/.test(igSource)) fail('IG exams use a native browser dialog');
+else pass('IG exams use application dialogs and toasts');
+for (const token of ['OL','AS','A2','FULL_A_LEVEL','FIRST_ENTRY','RETAKE','REMARK','LATE_ENTRY','create_ig_exam_payment_batch']) {
+  if (!igSource.includes(token) && !migrationSql.includes(token.toLowerCase())) fail(`IG exams missing ${token}`);
+}
+if (!failures.some(item => item.startsWith('IG exams missing'))) pass('IG exam levels, entry types and unified receipt RPC are present');
 
 if (!html.includes('window.forgot=()=>openM(') || /window\.forgot=async\(\)=>\{let e=prompt/.test(html)) fail('password recovery does not use the application dialog');
 else pass('password recovery uses the application dialog');
