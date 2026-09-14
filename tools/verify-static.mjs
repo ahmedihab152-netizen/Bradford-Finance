@@ -71,6 +71,10 @@ const cashierSource = read('cashier.js');
 if (/\b(?:alert|prompt|confirm)\s*\(/.test(cashierSource)) fail('cashier uses a native browser dialog');
 else pass('cashier uses application dialogs and toasts');
 
+const hrSource = read('hr-operations.js');
+if (/\b(?:alert|prompt|confirm)\s*\(/.test(hrSource)) fail('HR operations use a native browser dialog');
+else pass('HR operations use application dialogs and toasts');
+
 const requiredReleaseDocs = [
   'docs/ADMIN_GUIDE.md',
   'docs/ROLE_GUIDES.md',
