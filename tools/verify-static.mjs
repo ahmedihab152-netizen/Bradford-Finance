@@ -61,8 +61,34 @@ const missingRls = [...new Set(createdPublicTables)].filter(table =>
   !migrationSql.includes(`alter table public.${table} enable row level security`) && !dynamicallyProtected.has(table));
 missingRls.length ? fail(`created public tables without an RLS enable statement: ${missingRls.join(', ')}`) : pass('all locally created public tables have an RLS enable statement');
 
-if (!/cashier\.js\?v=/.test(html)) fail('cashier bundle is not cache-versioned');
-else pass('cashier bundle is cache-versioned');
+for (const bundle of ['cashier.js', 'hr-operations.js']) {
+  const escaped = bundle.replace('.', '\\.');
+  const reference = new RegExp(`${escaped}\\?v=[^"']+`);
+  reference.test(html) ? pass(`${bundle} is cache-versioned`) : fail(`${bundle} is not cache-versioned`);
+}
+
+const requiredReleaseDocs = [
+  'docs/ADMIN_GUIDE.md',
+  'docs/ROLE_GUIDES.md',
+  'docs/UAT_CHECKLIST.md',
+  'docs/RELEASE_NOTES.md',
+  'docs/CURRENT_ERD.md',
+  'docs/DATA_DICTIONARY.md',
+  'docs/BACKUP_RESTORE.md'
+];
+const missingReleaseDocs = requiredReleaseDocs.filter(file => !fs.existsSync(path.join(root, file)));
+missingReleaseDocs.length ? fail(`missing release documents: ${missingReleaseDocs.join(', ')}`) : pass('required release documents are present');
+
+const workflowFile = path.join(root, '.github', 'workflows', 'verify.yml');
+if (!fs.existsSync(workflowFile)) {
+  fail('static verification workflow is missing');
+} else {
+  const workflow = fs.readFileSync(workflowFile, 'utf8');
+  if (!/permissions:\s*\n\s*contents:\s*read/.test(workflow)) fail('verification workflow does not declare read-only contents permission');
+  else pass('verification workflow uses read-only repository permission');
+  if (!/run:\s*npm test/.test(workflow)) fail('verification workflow does not run the repository test command');
+  else pass('verification workflow runs npm test');
+}
 
 if (failures.length) {
   console.error('\nSTATIC VERIFICATION FAILED');
