@@ -1,0 +1,13 @@
+{
+  "name": "bradford-school-erp",
+  "version": "4.1.0-phase0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node tools/verify-static.mjs",
+    "test:static": "node tools/verify-static.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
