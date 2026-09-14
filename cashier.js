@@ -4,6 +4,12 @@
  cashierRoles.forEach(r=>{if(access[r]&&!access[r].includes('cashier'))access[r].splice(Math.min(3,access[r].length),0,'cashier')});
  const previousRender=render;
  render=async function(){if(page==='cashier')return renderCashier();return previousRender()};
+ const previousBuildNav=buildNav;
+ buildNav=function(){
+  previousBuildNav();
+  const button=$('#nav button[data-p="cashier"]');
+  if(button)button.onclick=async e=>{e.stopPropagation();page='cashier';$$('#nav button').forEach(x=>x.classList.remove('on'));button.classList.add('on');$('#title').textContent=pages.cashier;await renderCashier()};
+ };
  const state={accounts:[],selected:null,bundle:null,lines:[],tenders:[{method:'CASH',amount:0}],batches:[]};
  const gradeOrder=['KG1','KG2','Grade 1','Grade 2','Grade 3','Grade 4','Grade 5','Grade 6','Grade 7','Grade 8','Grade 9','Grade 10','Grade 11','Grade 12'];
  const categoryNames={TUITION:'المصروفات الدراسية',APPLICATION:'Application',BOOKS:'الكتب',TRANSPORT:'الباص والنقل',UNIFORM:'اليونيفورم',ACTIVITY:'الأنشطة',EXAMS:'الامتحانات',OTHER:'خدمات أخرى'};
