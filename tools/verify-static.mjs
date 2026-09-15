@@ -8,7 +8,7 @@ const pass = message => console.log(`PASS ${message}`);
 const fail = message => failures.push(message);
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 
-for (const file of ['cashier.js', 'hr-operations.js', 'hr-phase6.js', 'ig-exams.js', 'admissions.js', 'procurement.js', 'inventory.js', 'assets-cheques.js', 'transport-operations.js', 'tax-integration.js', 'multi-school.js']) {
+for (const file of ['cashier.js', 'hr-operations.js', 'hr-phase6.js', 'ig-exams.js', 'admissions.js', 'procurement.js', 'inventory.js', 'assets-cheques.js', 'transport-operations.js', 'tax-integration.js', 'multi-school.js', 'report-center.js']) {
   try {
     new vm.Script(read(file), { filename: file });
     pass(`${file} parses as JavaScript`);
@@ -29,7 +29,7 @@ inlineScripts.forEach((match, index) => {
 });
 if (!failures.some(item => item.startsWith('index inline'))) pass(`${inlineScripts.length} classic index.html scripts parse`);
 
-const sourceFiles = ['index.html', 'cashier.js', 'hr-operations.js', 'hr-phase6.js', 'ig-exams.js', 'admissions.js', 'procurement.js', 'inventory.js', 'assets-cheques.js', 'transport-operations.js', 'tax-integration.js', 'multi-school.js'];
+const sourceFiles = ['index.html', 'cashier.js', 'hr-operations.js', 'hr-phase6.js', 'ig-exams.js', 'admissions.js', 'procurement.js', 'inventory.js', 'assets-cheques.js', 'transport-operations.js', 'tax-integration.js', 'multi-school.js', 'report-center.js'];
 const combinedSource = sourceFiles.map(file => `${file}\n${read(file)}`).join('\n');
 const forbidden = [
   [/service[_-]?role/i, 'service-role reference in frontend'],
@@ -61,7 +61,7 @@ const missingRls = [...new Set(createdPublicTables)].filter(table =>
   !migrationSql.includes(`alter table public.${table} enable row level security`) && !dynamicallyProtected.has(table));
 missingRls.length ? fail(`created public tables without an RLS enable statement: ${missingRls.join(', ')}`) : pass('all locally created public tables have an RLS enable statement');
 
-for (const bundle of ['cashier.js', 'hr-operations.js', 'hr-phase6.js', 'ig-exams.js', 'admissions.js', 'procurement.js', 'inventory.js', 'assets-cheques.js', 'transport-operations.js', 'tax-integration.js', 'multi-school.js']) {
+for (const bundle of ['cashier.js', 'hr-operations.js', 'hr-phase6.js', 'ig-exams.js', 'admissions.js', 'procurement.js', 'inventory.js', 'assets-cheques.js', 'transport-operations.js', 'tax-integration.js', 'multi-school.js', 'report-center.js']) {
   const escaped = bundle.replace('.', '\\.');
   const reference = new RegExp(`${escaped}\\?v=[^"']+`);
   reference.test(html) ? pass(`${bundle} is cache-versioned`) : fail(`${bundle} is not cache-versioned`);
@@ -134,6 +134,14 @@ if (!failures.some(item => item.startsWith('Tax integration missing'))) pass('Ta
 const multiSchoolSource = read('multi-school.js');
 for (const token of ['erp_organizations','erp_schools','erp_branches','erp_divisions','erp_academic_years','erp_user_scopes']) if (!multiSchoolSource.includes(token)) fail(`Multi-school missing ${token}`);
 if (!failures.some(item => item.startsWith('Multi-school missing'))) pass('Multi-school hierarchy and user-scope seams are present');
+
+const reportSource = read('report-center.js');
+if (/\b(?:alert|prompt|confirm)\s*\(/.test(reportSource)) fail('Report center uses a native browser dialog');
+else pass('Report center uses application dialogs and toasts');
+for (const token of ["count:'exact'", '.range(', 'v_inventory_stock_card', 'v_asset_book_values', 'v_transport_route_occupancy', 'v_ig_exam_entry_balances', 'v_journal_trial_balance', 'bfLocale', 'openUnifiedReportDetail']) {
+  if (!reportSource.includes(token)) fail(`Report center missing ${token}`);
+}
+if (!failures.some(item => item.startsWith('Report center missing'))) pass('Unified reports use server pagination, RLS-backed sources, details and localization seams');
 
 if (!html.includes('window.forgot=()=>openM(') || /window\.forgot=async\(\)=>\{let e=prompt/.test(html)) fail('password recovery does not use the application dialog');
 else pass('password recovery uses the application dialog');

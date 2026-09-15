@@ -1,5 +1,15 @@
 # Bradford School ERP — release notes
 
+## 5.0.0-phase9 — 2026-09-15
+
+- Replaced the reports link directory with a unified, RLS-backed report center.
+- Added server-side date, status and supported text filters with exact result counts and 50-row pagination.
+- Added student, collection, expense, vendor, inventory, asset, transport, payroll, IG, ledger and tax report sources.
+- Added row details, current-page totals, Arabic RTL A4 printing/PDF and Excel-compatible CSV export.
+- Added Arabic/English message infrastructure plus responsive loading, empty, error and unauthorized states.
+- Kept sensitive data filtering in Supabase RLS; no service-role credential or privileged browser path was added.
+- This phase is frontend-only and performs no Production data migration or automatic data correction.
+
 ## 4.9.0-phase8 — 2026-09-15
 
 - Added Organization, School, Branch, Division, Academic Year and user-scope entities with RLS.
