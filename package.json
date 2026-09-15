@@ -7,9 +7,29 @@
     "test": "node --test tests/verify-backup.test.mjs tests/security-invariants.test.mjs && node tools/verify-static.mjs",
     "test:unit": "node --test tests/verify-backup.test.mjs",
     "test:static": "node tools/verify-static.mjs",
-    "verify:backup": "node tools/verify-backup.mjs"
+    "test:mobile": "npm run mobile:web && node --test tests/mobile-bundle.test.mjs",
+    "verify:backup": "node tools/verify-backup.mjs",
+    "mobile:web": "node mobile/build-web.mjs",
+    "mobile:add": "npm run mobile:web && cap add android && cap add ios",
+    "mobile:sync": "npm run mobile:web && cap sync",
+    "mobile:android": "cap open android",
+    "mobile:ios": "cap open ios"
   },
   "engines": {
     "node": ">=20"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.5.2",
+    "@capacitor/app": "8.1.1",
+    "@capacitor/core": "8.5.2",
+    "@capacitor/ios": "8.5.2",
+    "@capacitor/share": "8.0.1",
+    "@capacitor/status-bar": "8.0.3",
+    "@supabase/supabase-js": "2.116.0"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "3.0.5",
+    "@capacitor/cli": "8.5.2",
+    "esbuild": "0.28.2"
   }
 }

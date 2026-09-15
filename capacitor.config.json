@@ -1,0 +1,15 @@
+{
+  "appId": "com.bradforderp.app",
+  "appName": "Bradford ERP",
+  "webDir": "www",
+  "backgroundColor": "#0b1f38",
+  "loggingBehavior": "production",
+  "android": {
+    "allowMixedContent": false,
+    "webContentsDebuggingEnabled": false
+  },
+  "ios": {
+    "contentInset": "automatic",
+    "preferredContentMode": "mobile"
+  }
+}
