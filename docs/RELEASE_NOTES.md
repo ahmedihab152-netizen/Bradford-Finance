@@ -1,5 +1,16 @@
 # Bradford School ERP — release notes
 
+## 4.5.0-phase4 — 2026-09-15
+
+- Added RLS-protected asset maintenance, warranty, custody and immutable lifecycle registers.
+- Added a security-invoker asset book-value view with monthly depreciation calculations.
+- Added immutable cheque status history and a due/overdue alert view for incoming and outgoing cheques.
+- Removed direct deletion privileges from approved asset and cheque lifecycle records.
+- Added searchable Arabic RTL asset and cheque dashboards, row details, print/PDF and CSV export.
+- Added guarded cheque cancellation and bounce actions with mandatory reasons and server-side authorization.
+- Fixed authenticated execution of the existing private MFA enforcement helper without exposing administrative capability.
+- Staging UAT verified asset acquisition/transfer/depreciation and cheque cancellation/history, then rolled back all test rows.
+
 ## 4.4.0-phase3 — 2026-09-15
 
 - Added multi-warehouse general inventory, categories, SKU/barcode items, balances, movements, counts and stock-card reporting.
