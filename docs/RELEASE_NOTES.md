@@ -1,5 +1,16 @@
 # Bradford School ERP — release notes
 
+## 4.6.0-phase5 — 2026-09-15
+
+- Added route stops, scheduled trips and per-student boarding/alighting attendance.
+- Added temporary route changes, vehicle documents and expiry alerts.
+- Added vehicle maintenance, fuel and incident registers with immutable audit evidence.
+- Added a security-invoker route occupancy view with capacity and over-capacity warnings.
+- Added a disabled-by-default, provider-neutral integration contract for future GPS and parent applications; no live GPS is claimed.
+- Added a searchable RTL transport operations center with details, printing/PDF and CSV export across operational registers.
+- Kept transport accounting isolated: only existing POSTED student payments contribute to official transport revenue.
+- Staging UAT verified route, vehicle, enrollment, trip, boarding attendance, occupancy and audit behavior, then rolled back all test rows.
+
 ## 4.5.0-phase4 — 2026-09-15
 
 - Added RLS-protected asset maintenance, warranty, custody and immutable lifecycle registers.
