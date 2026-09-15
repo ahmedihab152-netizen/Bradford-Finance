@@ -1,5 +1,15 @@
 # Bradford School ERP — release notes
 
+## 4.4.0-phase3 — 2026-09-15
+
+- Added multi-warehouse general inventory, categories, SKU/barcode items, balances, movements, counts and stock-card reporting.
+- Added weighted-average costing for receipts and transfers.
+- Added server-side negative-stock prevention and POSTED-only balance effects.
+- Added batch, serial and expiry fields for tracked items.
+- Added nullable procurement receiving links without altering existing receipts.
+- Added searchable RTL inventory registers with details, print/PDF and CSV export.
+- Staging UAT posted a receipt, verified quantity/cost, rejected an over-issue and rolled back all test rows.
+
 ## 4.3.0-phase2 — 2026-09-15
 
 - Added the operational Procurement and Vendor center with searchable PR, RFQ, PO, receiving, bill, vendor and return registers.

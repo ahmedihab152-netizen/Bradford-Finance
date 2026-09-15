@@ -8,7 +8,7 @@ const pass = message => console.log(`PASS ${message}`);
 const fail = message => failures.push(message);
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 
-for (const file of ['cashier.js', 'hr-operations.js', 'ig-exams.js', 'admissions.js', 'procurement.js']) {
+for (const file of ['cashier.js', 'hr-operations.js', 'ig-exams.js', 'admissions.js', 'procurement.js', 'inventory.js']) {
   try {
     new vm.Script(read(file), { filename: file });
     pass(`${file} parses as JavaScript`);
@@ -29,7 +29,7 @@ inlineScripts.forEach((match, index) => {
 });
 if (!failures.some(item => item.startsWith('index inline'))) pass(`${inlineScripts.length} classic index.html scripts parse`);
 
-const sourceFiles = ['index.html', 'cashier.js', 'hr-operations.js', 'ig-exams.js', 'admissions.js', 'procurement.js'];
+const sourceFiles = ['index.html', 'cashier.js', 'hr-operations.js', 'ig-exams.js', 'admissions.js', 'procurement.js', 'inventory.js'];
 const combinedSource = sourceFiles.map(file => `${file}\n${read(file)}`).join('\n');
 const forbidden = [
   [/service[_-]?role/i, 'service-role reference in frontend'],
@@ -61,7 +61,7 @@ const missingRls = [...new Set(createdPublicTables)].filter(table =>
   !migrationSql.includes(`alter table public.${table} enable row level security`) && !dynamicallyProtected.has(table));
 missingRls.length ? fail(`created public tables without an RLS enable statement: ${missingRls.join(', ')}`) : pass('all locally created public tables have an RLS enable statement');
 
-for (const bundle of ['cashier.js', 'hr-operations.js', 'ig-exams.js', 'admissions.js', 'procurement.js']) {
+for (const bundle of ['cashier.js', 'hr-operations.js', 'ig-exams.js', 'admissions.js', 'procurement.js', 'inventory.js']) {
   const escaped = bundle.replace('.', '\\.');
   const reference = new RegExp(`${escaped}\\?v=[^"']+`);
   reference.test(html) ? pass(`${bundle} is cache-versioned`) : fail(`${bundle} is not cache-versioned`);
@@ -96,6 +96,12 @@ if (/\b(?:alert|prompt|confirm)\s*\(/.test(procurementSource)) fail('Procurement
 else pass('Procurement uses application dialogs and toasts');
 for (const token of ['procurement_three_way_match','purchase_requisitions','purchase_orders','goods_receipts','vendor_bills','vendors']) if (!procurementSource.includes(token)) fail(`Procurement missing ${token}`);
 if (!failures.some(item => item.startsWith('Procurement missing'))) pass('Procurement workflow seams are present');
+
+const inventorySource = read('inventory.js');
+if (/\b(?:alert|prompt|confirm)\s*\(/.test(inventorySource)) fail('Inventory uses a native browser dialog');
+else pass('Inventory uses application dialogs and toasts');
+for (const token of ['inventory_balances','inventory_movements','v_inventory_stock_card','post_inventory_movement']) if (!inventorySource.includes(token)) fail(`Inventory missing ${token}`);
+if (!failures.some(item => item.startsWith('Inventory missing'))) pass('Inventory balance, movement and stock-card seams are present');
 
 if (!html.includes('window.forgot=()=>openM(') || /window\.forgot=async\(\)=>\{let e=prompt/.test(html)) fail('password recovery does not use the application dialog');
 else pass('password recovery uses the application dialog');
