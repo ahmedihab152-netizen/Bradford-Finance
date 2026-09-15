@@ -1,5 +1,15 @@
 # Bradford School ERP — release notes
 
+## 4.9.0-phase8 — 2026-09-15
+
+- Added Organization, School, Branch, Division, Academic Year and user-scope entities with RLS.
+- Registered the existing MCIS school, main campus and American/IG/Administration divisions without changing operational values.
+- Backfilled organization keys across core student, finance, procurement, inventory, transport, HR and ledger tables.
+- Added restrictive organization policies and a trigger guard so existing permissive policies cannot cause cross-organization access.
+- Scoped every currently active user to the existing MCIS organization to preserve current access after migration.
+- Added an RTL school/branch hierarchy page with details, printing/PDF and CSV export.
+- Staging UAT verified current MCIS access, denied an unassigned second organization and blocked a cross-tenant student insert, then rolled back the test tenant.
+
 ## 4.8.0-phase7 — 2026-09-15
 
 - Added RLS-protected tax organization/branch settings, ETA item mappings, document queue, attempts and reconciliation registers.
