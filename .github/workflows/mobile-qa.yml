@@ -1,0 +1,65 @@
+name: Build Android QA app
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "android/**"
+      - "mobile/**"
+      - "package.json"
+      - "package-lock.json"
+      - "capacitor.config.json"
+      - ".github/workflows/mobile-qa.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-qa-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android-debug:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Verify web and mobile bundles
+        run: |
+          npm test
+          npm run test:mobile
+
+      - name: Sync Android project
+        run: npx cap sync android
+
+      - name: Build QA APK
+        working-directory: android
+        run: ./gradlew assembleDebug
+
+      - name: Upload QA APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Bradford-ERP-Android-QA
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
