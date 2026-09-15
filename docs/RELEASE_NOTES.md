@@ -1,5 +1,15 @@
 # Bradford School ERP — release notes
 
+## 4.8.0-phase7 — 2026-09-15
+
+- Added RLS-protected tax organization/branch settings, ETA item mappings, document queue, attempts and reconciliation registers.
+- Added invoice, receipt, Credit Note and Debit Note document types with controlled lifecycle states.
+- Added server-authorized READY validation and an auditable Sandbox processing RPC.
+- Added a JWT-protected Edge Function that forwards the user identity and never contains ETA credentials or a service-role key.
+- Sandbox processing refuses Production configuration and labels every response as simulation.
+- Added an Arabic RTL tax-readiness center with search, details, printing/PDF and CSV export.
+- Staging UAT validated DRAFT → READY → sandbox ACCEPTED, attempt history and audit evidence, then rolled back all test rows.
+
 ## 4.7.0-phase6 — 2026-09-15
 
 - Completed server-side employee-import Preview with SHA-256, validation rows and race-safe employee-code duplicate prevention.
