@@ -1,10 +1,10 @@
 {
   "name": "bradford-school-erp",
-  "version": "5.0.0-phase9",
+  "version": "5.1.0-phase10",
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test tests/verify-backup.test.mjs && node tools/verify-static.mjs",
+    "test": "node --test tests/verify-backup.test.mjs tests/security-invariants.test.mjs && node tools/verify-static.mjs",
     "test:unit": "node --test tests/verify-backup.test.mjs",
     "test:static": "node tools/verify-static.mjs",
     "verify:backup": "node tools/verify-backup.mjs"

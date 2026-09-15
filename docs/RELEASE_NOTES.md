@@ -1,5 +1,15 @@
 # Bradford School ERP — release notes
 
+## 5.1.0-phase10 — 2026-09-15
+
+- Removed the publicly shipped legacy application HTML, leaving `index.html` as the only production entry point.
+- Replaced all remaining native `alert()`, `prompt()` and `confirm()` calls with accessible application modals and toasts.
+- Added executable security invariant tests for exclusive approvals, role seams, idempotency, balanced journals, negative-stock protection, admission enrollment, secrets and editable JWT metadata.
+- Added authenticated CORS preflight handling to the tax Edge Function and deployed it to Production.
+- Verified Supabase Attack Protection reports leaked-password protection enabled.
+- Verified the Supabase Security Advisor reports zero errors; its 24 warnings are intentional authenticated SECURITY DEFINER workflow endpoints with server-side role/authority checks.
+- Observed the latest scheduled physical database backup at 2026-09-15 05:19:56 UTC. No Production finance or student data was modified.
+
 ## 5.0.0-phase9 — 2026-09-15
 
 - Replaced the reports link directory with a unified, RLS-backed report center.

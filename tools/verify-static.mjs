@@ -41,6 +41,11 @@ for (const [pattern, label] of forbidden) pattern.test(combinedSource) ? fail(la
 
 const indexVariants = fs.readdirSync(root).filter(name => /^index(?:\s|\(|-).*\.html$/i.test(name));
 indexVariants.length ? fail(`extra index variants: ${indexVariants.join(', ')}`) : pass('one canonical index.html entry point');
+const shippedHtml = fs.readdirSync(root).filter(name => name.endsWith('.html'));
+shippedHtml.length===1&&shippedHtml[0]==='index.html' ? pass('no legacy HTML application is publicly shipped') : fail(`legacy HTML applications: ${shippedHtml.join(', ')}`);
+
+if (/\b(?:alert|prompt|confirm)\s*\(/.test(combinedSource)) fail('production frontend uses a native browser dialog');
+else pass('production frontend uses only application dialogs and toasts');
 
 const migrationDir = path.join(root, 'supabase', 'migrations');
 const migrations = fs.readdirSync(migrationDir).filter(name => name.endsWith('.sql')).sort();
@@ -130,6 +135,9 @@ if (/\b(?:alert|prompt|confirm)\s*\(/.test(taxSource)) fail('Tax integration use
 else pass('Tax integration uses application dialogs and toasts');
 for (const token of ['tax_documents','tax_code_mappings','tax_submission_attempts','tax_reconciliations','tax-adapter','SANDBOX']) if (!taxSource.includes(token)) fail(`Tax integration missing ${token}`);
 if (!failures.some(item => item.startsWith('Tax integration missing'))) pass('Tax queue, mapping, attempts, reconciliation and sandbox seams are present');
+const taxAdapter = read('supabase/functions/tax-adapter/index.ts');
+if (!taxAdapter.includes('req.method==="OPTIONS"') || !taxAdapter.includes('authorization')) fail('Tax Edge Function is missing authenticated CORS preflight handling');
+else pass('Tax Edge Function supports browser preflight and requires authorization');
 
 const multiSchoolSource = read('multi-school.js');
 for (const token of ['erp_organizations','erp_schools','erp_branches','erp_divisions','erp_academic_years','erp_user_scopes']) if (!multiSchoolSource.includes(token)) fail(`Multi-school missing ${token}`);

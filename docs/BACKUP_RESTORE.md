@@ -12,11 +12,11 @@ The command recalculates SHA-256 from the exact JSON payload and verifies its UT
 
 Run `tools/phase1-preflight.sql` using a read-only SQL session before the backup and against the isolated restored database. Resolve every missing required object, duplicate account/year, orphaned account and RLS failure before applying Phase 1.
 
-## Current production status — 2026-09-14
+## Current production status — 2026-09-15
 
-The Supabase dashboard reports **Free Plan — scheduled backups unavailable**. `backup_manifests` and `restore_test_runs` currently contain no verified run. This is a hard migration release gate, not a cosmetic warning.
+The Supabase project is on Pro. The dashboard shows a successful latest scheduled physical backup at `2026-09-15 05:19:56 UTC`. The `2026-09-14 05:20:32 UTC` physical backup was restored to the separate Staging project `jmeyaazpuzhhvvmvjmbd`; schema, critical row counts, RLS, balanced journals and rollback-only UAT passed. Storage objects remain outside database backups and must continue to use a separate encrypted object export and manifest.
 
-Choose and complete one safe path before the next migration:
+For each future release, complete one safe path before destructive or high-risk migrations:
 
 1. Upgrade the project to Pro and use **Restore to new project** for the rehearsal; or
 2. Provide a short-lived database connection/password to an authorized operator and run `supabase db dump`/`pg_dump` over SSL into encrypted off-site storage, then restore into an isolated local or staging database.

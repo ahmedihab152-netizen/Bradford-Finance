@@ -55,8 +55,11 @@ subtransactions and were rolled back in full.
 No automatic changes were made to the 14-student reconciliation difference or the
 1,188 expense-document review set.
 
-## Remaining dashboard advisory
+## Phase 10 dashboard verification — 2026-09-15
 
-Supabase Auth leaked-password protection is disabled and should be enabled in the
-dashboard. Public `SECURITY DEFINER` RPC warnings are expected for the controlled
-workflow endpoints; each endpoint performs server-side identity/role/authority checks.
+- Supabase Auth leaked-password protection: ENABLED — PASS.
+- Supabase Security Advisor: 0 errors — PASS.
+- Advisor warnings: 24 authenticated `SECURITY DEFINER` workflow endpoints. Each retained endpoint has server-side role/authority checks and a fixed `search_path`; warnings are accepted and monitored rather than hidden.
+- Latest scheduled physical backup observed: `2026-09-15 05:19:56 UTC`.
+- Tax adapter: CORS OPTIONS 204 and unauthenticated POST 401 — PASS.
+- No Production finance, student, HR, inventory or transport row was written during Phase 10 verification.
