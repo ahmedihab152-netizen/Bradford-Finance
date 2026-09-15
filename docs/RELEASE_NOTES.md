@@ -1,5 +1,15 @@
 # Bradford School ERP — release notes
 
+## 4.2.0-phase1 — 2026-09-15
+
+- Added an operational Arabic RTL Admissions dashboard with search, draft creation, details, workflow actions and printing.
+- Added 14 additive RLS-protected Admissions and Student Administration tables without changing existing rows.
+- Added server-authorized transitions and append-only decision/audit history.
+- Added idempotent enrollment that creates a student, zero-balance account and enrollment history atomically.
+- Added national-ID/passport duplicate constraints and probable-match review support.
+- No fee amount is inferred; approved fee plans remain a required activation input.
+- Staging UAT passed DRAFT through ENROLLED and rolled back fully; an unauthorized role saw zero rows.
+
 ## 4.1.0-phase0 — 2026-09-14
 
 Status: **NOT READY for full ERP production release**. The current Bradford Finance application remains available; this release establishes the controlled expansion baseline without applying a new database migration.
