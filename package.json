@@ -1,6 +1,6 @@
 {
   "name": "bradford-school-erp",
-  "version": "4.2.0-phase1",
+  "version": "4.3.0-phase2",
   "private": true,
   "type": "module",
   "scripts": {

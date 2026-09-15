@@ -1,5 +1,15 @@
 # Bradford School ERP — release notes
 
+## 4.3.0-phase2 — 2026-09-15
+
+- Added the operational Procurement and Vendor center with searchable PR, RFQ, PO, receiving, bill, vendor and return registers.
+- Added RFQ invitations, quote scoring, documented quotation exceptions, approval-limit configuration and quote decisions.
+- Added server-side three-way matching and persisted match evidence.
+- Added purchase returns and return lines without creating inventory movements before posting.
+- Blocked vendor payments unless the bill is posted and matched or has an approved exception; added duplicate-payment protection.
+- Tightened vendor and quotation write policies to authenticated finance roles and draft-only quotation changes.
+- Staging UAT matched PR/PO/GRN/invoice totals and rolled back all test rows.
+
 ## 4.2.0-phase1 — 2026-09-15
 
 - Added an operational Arabic RTL Admissions dashboard with search, draft creation, details, workflow actions and printing.
