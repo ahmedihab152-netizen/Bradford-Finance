@@ -14,7 +14,7 @@ This catalog groups the current production tables. Column-level definitions will
 | Uniform/books | uniform item/purchase/sale tables, `book_items`, packages | Uniform active; books catalog empty |
 | Assets | `fixed_assets`, depreciation, transfers, counts, disposals | Partial lifecycle |
 | Transport | routes, stops, vehicles, staff, enrollments, trips, attendance, temporary changes, documents, maintenance, fuel, incidents | Operations active; GPS remains a disabled provider-neutral contract until a provider is configured |
-| HR/payroll | employees, documents, attendance, movements, biometric tables, payroll runs/lines/payments | Employee baseline active; operational completion pending |
+| HR/payroll | employees, documents, attendance, movements, biometric tables, secure import batches/rows, payroll runs/lines/payments | Operational HR active with server-validated imports and controlled payroll approvals |
 | Tax and cheques | VAT, withholding, tax returns, `cheques` | Readiness structures; integrations/workflows pending |
 | Audit and recovery | `audit_events`, findings, alerts, import batches, backup manifests, restore tests, UAT tables | Audit active; verified backup/restore absent |
 

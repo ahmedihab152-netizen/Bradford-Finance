@@ -8,7 +8,7 @@ const pass = message => console.log(`PASS ${message}`);
 const fail = message => failures.push(message);
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 
-for (const file of ['cashier.js', 'hr-operations.js', 'ig-exams.js', 'admissions.js', 'procurement.js', 'inventory.js', 'assets-cheques.js', 'transport-operations.js']) {
+for (const file of ['cashier.js', 'hr-operations.js', 'hr-phase6.js', 'ig-exams.js', 'admissions.js', 'procurement.js', 'inventory.js', 'assets-cheques.js', 'transport-operations.js']) {
   try {
     new vm.Script(read(file), { filename: file });
     pass(`${file} parses as JavaScript`);
@@ -29,7 +29,7 @@ inlineScripts.forEach((match, index) => {
 });
 if (!failures.some(item => item.startsWith('index inline'))) pass(`${inlineScripts.length} classic index.html scripts parse`);
 
-const sourceFiles = ['index.html', 'cashier.js', 'hr-operations.js', 'ig-exams.js', 'admissions.js', 'procurement.js', 'inventory.js', 'assets-cheques.js', 'transport-operations.js'];
+const sourceFiles = ['index.html', 'cashier.js', 'hr-operations.js', 'hr-phase6.js', 'ig-exams.js', 'admissions.js', 'procurement.js', 'inventory.js', 'assets-cheques.js', 'transport-operations.js'];
 const combinedSource = sourceFiles.map(file => `${file}\n${read(file)}`).join('\n');
 const forbidden = [
   [/service[_-]?role/i, 'service-role reference in frontend'],
@@ -61,7 +61,7 @@ const missingRls = [...new Set(createdPublicTables)].filter(table =>
   !migrationSql.includes(`alter table public.${table} enable row level security`) && !dynamicallyProtected.has(table));
 missingRls.length ? fail(`created public tables without an RLS enable statement: ${missingRls.join(', ')}`) : pass('all locally created public tables have an RLS enable statement');
 
-for (const bundle of ['cashier.js', 'hr-operations.js', 'ig-exams.js', 'admissions.js', 'procurement.js', 'inventory.js', 'assets-cheques.js', 'transport-operations.js']) {
+for (const bundle of ['cashier.js', 'hr-operations.js', 'hr-phase6.js', 'ig-exams.js', 'admissions.js', 'procurement.js', 'inventory.js', 'assets-cheques.js', 'transport-operations.js']) {
   const escaped = bundle.replace('.', '\\.');
   const reference = new RegExp(`${escaped}\\?v=[^"']+`);
   reference.test(html) ? pass(`${bundle} is cache-versioned`) : fail(`${bundle} is not cache-versioned`);
@@ -118,6 +118,12 @@ for (const token of ['transport_route_stops','transport_trips','transport_trip_a
   if (!transportSource.includes(token)) fail(`Transport operations missing ${token}`);
 }
 if (!failures.some(item => item.startsWith('Transport operations missing'))) pass('Transport operational, safety and capacity seams are present');
+
+const hrPhase6Source = read('hr-phase6.js');
+if (/\b(?:alert|prompt|confirm)\s*\(/.test(hrPhase6Source)) fail('HR Phase 6 uses a native browser dialog');
+else pass('HR Phase 6 uses application dialogs and toasts');
+for (const token of ['hr_preview_employee_import','hr_confirm_employee_import','hr_preview_biometric_import','hr_confirm_biometric_import','SHA-256']) if (!hrPhase6Source.includes(token)) fail(`HR Phase 6 missing ${token}`);
+if (!failures.some(item => item.startsWith('HR Phase 6 missing'))) pass('HR employee and biometric server-side import seams are present');
 
 if (!html.includes('window.forgot=()=>openM(') || /window\.forgot=async\(\)=>\{let e=prompt/.test(html)) fail('password recovery does not use the application dialog');
 else pass('password recovery uses the application dialog');

@@ -1,5 +1,14 @@
 # Bradford School ERP — release notes
 
+## 4.7.0-phase6 — 2026-09-15
+
+- Completed server-side employee-import Preview with SHA-256, validation rows and race-safe employee-code duplicate prevention.
+- Restricted final employee import confirmation to the designated HR Manager authority (Rehab); HR Officer can prepare Preview only.
+- Completed biometric-file Preview with device validation, unlinked-user detection and punch-log duplicate prevention.
+- Restricted biometric confirmation to the designated HR Manager and kept immutable raw logs outside payroll until reviewed movements are approved.
+- Preserved the established payroll authority chain: HR Officer draft, Rehab HR approval, Dr. Amany final approval and designated Mahmoud disbursement-only action.
+- Staging UAT verified one valid, one duplicate and one invalid employee row, blocked HR Officer confirmation, allowed designated HR Manager confirmation, then rolled back all rows.
+
 ## 4.6.0-phase5 — 2026-09-15
 
 - Added route stops, scheduled trips and per-student boarding/alighting attendance.
