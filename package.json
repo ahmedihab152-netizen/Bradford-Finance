@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test tests/verify-backup.test.mjs tests/security-invariants.test.mjs && node tools/verify-static.mjs",
+    "test": "node --test tests/verify-backup.test.mjs tests/security-invariants.test.mjs tests/operational-ui.test.mjs && node tools/verify-static.mjs",
     "test:unit": "node --test tests/verify-backup.test.mjs",
     "test:static": "node tools/verify-static.mjs",
     "test:mobile": "npm run mobile:web && node --test tests/mobile-bundle.test.mjs",
