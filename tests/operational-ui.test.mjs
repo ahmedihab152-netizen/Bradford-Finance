@@ -42,3 +42,17 @@ test('specialized roles are granted bounded table access',()=>{
  for(const role of ['CASHIER','TREASURY_MANAGER','STOREKEEPER','PROCUREMENT','APPROVER']) assert.match(roles,new RegExp(role));
  assert.doesNotMatch(roles,/service_role/);
 });
+
+test('remaining operational forms are connected to persisted records',()=>{
+ for(const name of ['newRFQ','newQuoteComparison','newPurchaseOrder','newGoodsReceipt','newVendorBill','newPurchaseReturn','newInventoryCount','newTransportTrip','newTransportVehicle','newTransportStaff','newAssetMaintenance','newAssetTransfer','newAssetDisposal','newHREmployeeDocument','newHRAttendance','newHRLeave','newHRDeduction','newHRCover','newHRCompensation']) assert.match(ui,new RegExp(`window\\.${name}=`));
+ for(const table of ['procurement_rfqs','procurement_quote_decisions','purchase_orders','goods_receipts','vendor_bills','purchase_returns','inventory_counts','transport_trips','transport_vehicles','transport_staff','asset_maintenance','asset_transfers','asset_disposals','hr_employee_documents','hr_attendance','hr_leave_requests','hr_compensation_items','hr_cover_assignments']) assert.match(ui,new RegExp(`(?:sourceTable=')?${table}`));
+});
+
+test('operational attachments use private storage, camera capture, preview, hash and signed URL',()=>{
+ assert.match(ui,/capture="environment"/);
+ assert.match(ui,/attachment-preview/);
+ assert.match(ui,/erp-private-documents/);
+ assert.match(ui,/fileHash\(file\)/);
+ assert.match(ui,/createSignedUrl/);
+ assert.match(ui,/uploaded_by:session\.user\.id/);
+});
