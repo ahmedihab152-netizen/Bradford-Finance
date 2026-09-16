@@ -7,6 +7,8 @@ const ui=readFileSync(new URL('../operational-ui.js',import.meta.url),'utf8');
 const foundation=readFileSync(new URL('../supabase/migrations/20260916120000_operational_ui_foundation.sql',import.meta.url),'utf8');
 const roles=readFileSync(new URL('../supabase/migrations/20260916122000_operational_role_policies.sql',import.meta.url),'utf8');
 const attachmentScope=readFileSync(new URL('../supabase/migrations/20260916123000_scope_operation_attachments.sql',import.meta.url),'utf8');
+const workflows=readFileSync(new URL('../supabase/migrations/20260916133000_complete_operational_server_workflows.sql',import.meta.url),'utf8');
+const quoteApproval=readFileSync(new URL('../supabase/migrations/20260916134000_quote_decision_approval_state.sql',import.meta.url),'utf8');
 
 test('operational shell is loaded and public sign-up is removed at runtime',()=>{
  assert.match(html,/operational-ui\.js\?v=20260916-1/);
@@ -55,4 +57,15 @@ test('operational attachments use private storage, camera capture, preview, hash
  assert.match(ui,/fileHash\(file\)/);
  assert.match(ui,/createSignedUrl/);
  assert.match(ui,/uploaded_by:session\.user\.id/);
+});
+
+test('remaining operational state machines are server-side, role-checked and audited',()=>{
+ for(const fn of ['procurement_rfq_action','goods_receipt_action','inventory_count_action','hr_operational_action','asset_maintenance_action','transport_trip_action']) assert.match(workflows,new RegExp(`function public\\.${fn}`));
+ for(const role of ['PROCUREMENT','STOREKEEPER','APPROVER','HR_OFFICER','HR_MANAGER','ACCOUNTANT','OWNER','FINANCE_MANAGER']) assert.match(workflows,new RegExp(role));
+ assert.match(workflows,/for update/);
+ assert.match(workflows,/insert into public\.audit_events/);
+ assert.match(workflows,/perform public\.post_inventory_movement/);
+ assert.match(quoteApproval,/status in\('DRAFT','APPROVED','REJECTED'\)/);
+ assert.match(quoteApproval,/approve_procurement_quote_decision/);
+ assert.match(quoteApproval,/reject_procurement_quote_decision/);
 });

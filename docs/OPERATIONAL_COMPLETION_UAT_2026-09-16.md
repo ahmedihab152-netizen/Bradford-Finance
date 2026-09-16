@@ -70,4 +70,37 @@ Post-UAT residue query returned zero for purchase requisitions, inventory counts
 - Full browser workflows through REVIEW/APPROVE/POSTED are not available for every newly exposed operational record type. Existing posting RPCs cover purchase requisitions/orders/vendor bills, inventory movements, payroll and asset disposal, but not every RFQ, GRN, stock count, maintenance, transfer, trip, attendance and leave record as a uniform financial workflow.
 - Because of these blockers, no Production migration, merge to `main`, deployment, or published/mobile screenshot claim was made.
 
-Decision: **NOT READY**.
+## Completion run — authenticated UAT
+
+Ten temporary Auth accounts were created in Staging, one for each requested role. Password authentication and profile loading succeeded for all ten accounts. Their JWTs were then used against the real REST/RPC boundary for the following state machines:
+
+| Workflow | Roles used | Final state | Result |
+|---|---|---|---|
+| RFQ | PROCUREMENT → APPROVER | CLOSED | PASS |
+| Quote decision | APPROVER | APPROVED | PASS |
+| Goods receipt | STOREKEEPER → APPROVER → OWNER | POSTED | PASS |
+| Inventory receipt/stock card | OWNER posting | quantity `1` | PASS |
+| Inventory count | STOREKEEPER → APPROVER → OWNER | POSTED | PASS |
+| Leave | HR_OFFICER → HR_MANAGER | APPROVED | PASS |
+| Cover | HR_OFFICER → HR_MANAGER | APPROVED | PASS |
+| Compensation | HR_OFFICER → HR_MANAGER | APPROVED | PASS |
+| Asset maintenance | ACCOUNTANT → OWNER | COMPLETED | PASS |
+| Transport trip | ACCOUNTANT | COMPLETED | PASS |
+
+The run produced 19 audit events. All UAT records, inventory effects and temporary Auth accounts were then removed. The final residue check returned zero for users, requisitions, vendors, inventory items, employees, maintenance records and trips.
+
+Additional Staging migrations:
+
+9. `20260916133000_complete_operational_server_workflows.sql`
+10. `20260916134000_quote_decision_approval_state.sql`
+11. `20260916135000_quote_decision_nullable_approval.sql`
+
+Repository verification after integration: 17/17 Node tests passed, all JavaScript parsed, static verification passed, and 51 additive migrations were unique.
+
+## Remaining release gate
+
+The Staging Security Advisor still reports `auth_leaked_password_protection` disabled even though the user confirmed it is enabled in Supabase. This likely means the setting was enabled on Production but not on the Staging project. The advisor also reports the intentionally exposed, role-guarded SECURITY DEFINER workflow RPCs; authenticated UAT demonstrated their role checks, but they remain visible as advisory warnings by design.
+
+No merge or push to `main` has been performed. Production has not received these migrations.
+
+Decision: **STAGING FUNCTIONAL PASS / PRODUCTION RELEASE HELD** pending reconciliation of the Staging password-protection advisor and the user's review of this report.
