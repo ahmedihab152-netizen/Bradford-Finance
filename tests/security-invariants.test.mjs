@@ -40,3 +40,14 @@ test('tax adapter requires bearer identity and supports browser preflight',()=>{
 test('authorization does not trust editable user metadata',()=>{
  assert.doesNotMatch(migrations,/raw_user_meta_data|user_metadata/);
 });
+
+test('final payroll separation of duties is enforced server-side',()=>{
+ const sod=read('supabase/migrations/20260917121000_final_payroll_separation_of_duties.sql').toLowerCase();
+ for(const token of ['biometric_manager','payroll_preparer','attendance_officer','dr_amany_approver','payroll_cashier'])assert.ok(sod.includes(token),token);
+ assert.match(sod,/separation of duties violation/);
+ assert.match(sod,/r\.status<>'approved'/);
+ assert.match(sod,/payment method, reference and document are required/);
+ assert.match(sod,/biometric_sync_enabled','false'/);
+ const prepareAudit=read('supabase/migrations/20260917122000_audit_payroll_preparation.sql').toLowerCase();
+ for(const token of ['prepare','prepared_by','prepared_at','supporting_document_url'])assert.ok(prepareAudit.includes(token),token);
+});
