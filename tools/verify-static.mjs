@@ -8,7 +8,7 @@ const pass = message => console.log(`PASS ${message}`);
 const fail = message => failures.push(message);
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 
-for (const file of ['cashier.js', 'hr-operations.js', 'hr-phase6.js', 'ig-exams.js', 'admissions.js', 'procurement.js', 'inventory.js', 'assets-cheques.js', 'transport-operations.js', 'tax-integration.js', 'multi-school.js', 'report-center.js']) {
+for (const file of ['cashier.js', 'hr-operations.js', 'hr-phase6.js', 'ig-exams.js', 'admissions.js', 'procurement.js', 'inventory.js', 'assets-cheques.js', 'transport-operations.js', 'tax-integration.js', 'multi-school.js', 'report-center.js', 'dr-amany-dashboard.js', 'amany-financial-approvals.js']) {
   try {
     new vm.Script(read(file), { filename: file });
     pass(`${file} parses as JavaScript`);
@@ -29,7 +29,7 @@ inlineScripts.forEach((match, index) => {
 });
 if (!failures.some(item => item.startsWith('index inline'))) pass(`${inlineScripts.length} classic index.html scripts parse`);
 
-const sourceFiles = ['index.html', 'cashier.js', 'hr-operations.js', 'hr-phase6.js', 'ig-exams.js', 'admissions.js', 'procurement.js', 'inventory.js', 'assets-cheques.js', 'transport-operations.js', 'tax-integration.js', 'multi-school.js', 'report-center.js'];
+const sourceFiles = ['index.html', 'cashier.js', 'hr-operations.js', 'hr-phase6.js', 'ig-exams.js', 'admissions.js', 'procurement.js', 'inventory.js', 'assets-cheques.js', 'transport-operations.js', 'tax-integration.js', 'multi-school.js', 'report-center.js', 'dr-amany-dashboard.js', 'amany-financial-approvals.js'];
 const combinedSource = sourceFiles.map(file => `${file}\n${read(file)}`).join('\n');
 const forbidden = [
   [/service[_-]?role/i, 'service-role reference in frontend'],

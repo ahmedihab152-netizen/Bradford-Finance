@@ -9,6 +9,8 @@ const roles=readFileSync(new URL('../supabase/migrations/20260916122000_operatio
 const attachmentScope=readFileSync(new URL('../supabase/migrations/20260916123000_scope_operation_attachments.sql',import.meta.url),'utf8');
 const workflows=readFileSync(new URL('../supabase/migrations/20260916133000_complete_operational_server_workflows.sql',import.meta.url),'utf8');
 const quoteApproval=readFileSync(new URL('../supabase/migrations/20260916134000_quote_decision_approval_state.sql',import.meta.url),'utf8');
+const amanyUi=readFileSync(new URL('../amany-financial-approvals.js',import.meta.url),'utf8');
+const amanyBatch=readFileSync(new URL('../supabase/migrations/20260920123000_amany_mobile_grouped_financial_approvals.sql',import.meta.url),'utf8');
 
 test('operational shell is loaded and public sign-up is removed at runtime',()=>{
  assert.match(html,/operational-ui\.js\?v=20260916-1/);
@@ -68,4 +70,15 @@ test('remaining operational state machines are server-side, role-checked and aud
  assert.match(quoteApproval,/status in\('DRAFT','APPROVED','REJECTED'\)/);
  assert.match(quoteApproval,/approve_procurement_quote_decision/);
  assert.match(quoteApproval,/reject_procurement_quote_decision/);
+});
+
+test('Dr Amany mobile approvals are grouped, filtered and transactionally reviewed',()=>{
+ for(const token of ['grade_program_config','afGrade','afProgram','afStatus','afType','afDate','Approve Selected','Reject Selected','amany-approval-card','@media(max-width:520px)']) assert.match(amanyUi,new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')));
+ assert.match(amanyUi,/range\(0,4999\)/);
+ assert.match(amanyUi,/review_financial_records_batch/);
+ assert.match(amanyBatch,/for update/);
+ assert.match(amanyBatch,/Duplicate records are not allowed/);
+ assert.match(amanyBatch,/BATCH_'\|\|v_action/);
+ assert.match(amanyBatch,/jsonb_array_length\(p_records\)>200/);
+ assert.doesNotMatch(amanyUi,/service_role/i);
 });

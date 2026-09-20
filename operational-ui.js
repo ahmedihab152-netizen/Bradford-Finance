@@ -140,3 +140,6 @@
  const signupTab=$('#st');if(signupTab)signupTab.remove();const signupForm=$('#sf');if(signupForm)signupForm.remove();
  addTopChrome();
 })();
+
+// Role-specific approval dashboard is kept in a separate audited module.
+(()=>{const s=document.createElement('script');s.src='dr-amany-dashboard.js?v=20260920-1';s.onload=()=>{const a=document.createElement('script');a.src='amany-financial-approvals.js?v=20260920-1';document.head.appendChild(a)};document.head.appendChild(s)})();
