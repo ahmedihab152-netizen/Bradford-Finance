@@ -151,8 +151,10 @@ for (const token of ["count:'exact'", '.range(', 'v_inventory_stock_card', 'v_as
 }
 if (!failures.some(item => item.startsWith('Report center missing'))) pass('Unified reports use server pagination, RLS-backed sources, details and localization seams');
 
-if (!html.includes('window.forgot=()=>openM(') || /window\.forgot=async\(\)=>\{let e=prompt/.test(html)) fail('password recovery does not use the application dialog');
+if (!/window\.forgot=\(\)=>\{?openM\(/.test(html) || /window\.forgot=async\(\)=>\{let e=prompt/.test(html)) fail('password recovery does not use the application dialog');
 else pass('password recovery uses the application dialog');
+if (!html.includes("RECOVERY_WAIT_MS=60000") || !html.includes("bradford_recovery_wait_until") || !html.includes("إعادة الإرسال بعد")) fail('password recovery cooldown and countdown are missing');
+else pass('password recovery prevents repeated sends and shows a countdown');
 if (!/id="modal"[^>]*role="dialog"[^>]*aria-modal="true"/.test(html)) fail('application modal lacks dialog accessibility attributes');
 else pass('application modal exposes dialog accessibility attributes');
 if (!html.includes('autocomplete="one-time-code"')) fail('MFA challenge lacks one-time-code autocomplete');
