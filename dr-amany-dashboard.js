@@ -1,7 +1,7 @@
 (()=>{
  const isAmany=()=>profile?.role==='DR_AMANY_APPROVER',isOwner=()=>profile?.role==='OWNER';
  Object.assign(pages,{amany_dashboard:'لوحة د. أماني',grade_program_config:'إعداد الصفوف والبرامج'});
- access.DR_AMANY_APPROVER=Array.from(new Set([...(access.DR_AMANY_APPROVER||[]),'amany_dashboard']));
+ access.DR_AMANY_APPROVER=Array.from(new Set([...(access.DR_AMANY_APPROVER||[]),'amany_dashboard','approvals']));
  access.OWNER=Array.from(new Set([...(access.OWNER||[]),'amany_dashboard','grade_program_config']));
  const oldRender=render,safe=async p=>{const r=await p;return r.error?{data:[],error:r.error}:{data:r.data||[],error:null}};
  const empty=(n,msg)=>'<tr><td colspan="'+n+'" class="hr-empty">'+esc(msg)+'</td></tr>';

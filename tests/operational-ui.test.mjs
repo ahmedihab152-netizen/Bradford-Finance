@@ -82,3 +82,8 @@ test('Dr Amany mobile approvals are grouped, filtered and transactionally review
  assert.match(amanyBatch,/jsonb_array_length\(p_records\)>200/);
  assert.doesNotMatch(amanyUi,/service_role/i);
 });
+
+test('Dr Amany navigation exposes both dashboard and financial approvals',()=>{
+  const dashboard=read('dr-amany-dashboard.js');
+  assert.match(dashboard,/access\.DR_AMANY_APPROVER=.*'amany_dashboard','approvals'/);
+});
