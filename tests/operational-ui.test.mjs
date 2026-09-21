@@ -10,6 +10,7 @@ const attachmentScope=readFileSync(new URL('../supabase/migrations/2026091612300
 const workflows=readFileSync(new URL('../supabase/migrations/20260916133000_complete_operational_server_workflows.sql',import.meta.url),'utf8');
 const quoteApproval=readFileSync(new URL('../supabase/migrations/20260916134000_quote_decision_approval_state.sql',import.meta.url),'utf8');
 const amanyUi=readFileSync(new URL('../amany-financial-approvals.js',import.meta.url),'utf8');
+const amanyDashboard=readFileSync(new URL('../dr-amany-dashboard.js',import.meta.url),'utf8');
 const amanyBatch=readFileSync(new URL('../supabase/migrations/20260920123000_amany_mobile_grouped_financial_approvals.sql',import.meta.url),'utf8');
 
 test('operational shell is loaded and public sign-up is removed at runtime',()=>{
@@ -84,6 +85,5 @@ test('Dr Amany mobile approvals are grouped, filtered and transactionally review
 });
 
 test('Dr Amany navigation exposes both dashboard and financial approvals',()=>{
-  const dashboard=read('dr-amany-dashboard.js');
-  assert.match(dashboard,/access\.DR_AMANY_APPROVER=.*'amany_dashboard','approvals'/);
+  assert.match(amanyDashboard,/access\.DR_AMANY_APPROVER=.*'amany_dashboard','approvals'/);
 });
