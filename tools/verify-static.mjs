@@ -159,6 +159,9 @@ if (!/id="modal"[^>]*role="dialog"[^>]*aria-modal="true"/.test(html)) fail('appl
 else pass('application modal exposes dialog accessibility attributes');
 if (!html.includes('autocomplete="one-time-code"')) fail('MFA challenge lacks one-time-code autocomplete');
 else pass('MFA challenge supports one-time-code entry');
+const operationalUi=fs.readFileSync(path.join(root,'operational-ui.js'),'utf8');
+if (!operationalUi.includes("event==='PASSWORD_RECOVERY'") || !operationalUi.includes('supabase.auth.updateUser({password})') || !operationalUi.includes('autocomplete="new-password"')) fail('password recovery does not complete with a secure password update form');
+else pass('password recovery completes with a secure password update form');
 if (/async function finAction\([^\n]*\b(?:alert|prompt|confirm)\s*\(/.test(html)) fail('financial approval workflow uses a native browser dialog');
 else pass('financial approval workflow uses application dialogs and toasts');
 

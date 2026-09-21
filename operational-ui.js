@@ -143,3 +143,23 @@
 
 // Role-specific approval dashboard is kept in a separate audited module.
 (()=>{const s=document.createElement('script');s.src='dr-amany-dashboard.js?v=20260920-1';s.onload=()=>{const a=document.createElement('script');a.src='amany-financial-approvals.js?v=20260920-1';document.head.appendChild(a)};document.head.appendChild(s)})();
+
+// Password recovery must end with an explicit password update; never collect or log the value elsewhere.
+(()=>{
+  function showRecoveryForm(){
+    openM('تعيين كلمة مرور جديدة','<form id="passwordRecoveryForm"><div class="note">اكتب كلمة مرور جديدة للحساب. لن تُعرض أو تُرسل إلى إدارة النظام.</div><div class="f"><label>كلمة المرور الجديدة</label><input id="recoveryPassword" type="password" minlength="12" autocomplete="new-password" required></div><div class="f"><label>تأكيد كلمة المرور</label><input id="recoveryPasswordConfirm" type="password" minlength="12" autocomplete="new-password" required></div><button id="recoveryPasswordSubmit" class="btn primary w">حفظ كلمة المرور</button></form>');
+  }
+  supabase.auth.onAuthStateChange((event)=>{if(event==='PASSWORD_RECOVERY')setTimeout(showRecoveryForm,0)});
+  document.addEventListener('submit',async event=>{
+    if(event.target.id!=='passwordRecoveryForm')return;
+    event.preventDefault();
+    const password=$('#recoveryPassword').value,confirmation=$('#recoveryPasswordConfirm').value,button=$('#recoveryPasswordSubmit');
+    if(password.length<12)return uiToast('كلمة المرور يجب ألا تقل عن 12 حرفًا.','warning');
+    if(password!==confirmation)return uiToast('تأكيد كلمة المرور غير مطابق.','warning');
+    button.disabled=true;button.textContent='جاري الحفظ…';
+    const result=await supabase.auth.updateUser({password});
+    if(result.error){button.disabled=false;button.textContent='حفظ كلمة المرور';return uiToast('تعذر تحديث كلمة المرور. اطلب رابط استعادة جديدًا بعد انتهاء مهلة الانتظار.','error',9000)}
+    closeM();uiToast('تم تحديث كلمة المرور. سجّل الدخول بكلمة المرور الجديدة.','success',8000);
+    await supabase.auth.signOut();setTimeout(()=>location.replace(location.origin+location.pathname),800);
+  });
+})();
