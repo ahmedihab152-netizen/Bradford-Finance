@@ -150,6 +150,10 @@
     openM('تعيين كلمة مرور جديدة','<form id="passwordRecoveryForm"><div class="note">اكتب كلمة مرور جديدة للحساب. لن تُعرض أو تُرسل إلى إدارة النظام.</div><div class="f"><label>كلمة المرور الجديدة</label><input id="recoveryPassword" type="password" minlength="12" autocomplete="new-password" required></div><div class="f"><label>تأكيد كلمة المرور</label><input id="recoveryPasswordConfirm" type="password" minlength="12" autocomplete="new-password" required></div><button id="recoveryPasswordSubmit" class="btn primary w">حفظ كلمة المرور</button></form>');
   }
   supabase.auth.onAuthStateChange((event)=>{if(event==='PASSWORD_RECOVERY')setTimeout(showRecoveryForm,0)});
+  // The SDK may finish consuming the recovery fragment before this deferred bundle loads.
+  // Preserve a URL-based fallback so a valid recovery link always displays the form.
+  const recoveryParams=new URLSearchParams(location.hash.slice(1)),recoveryQuery=new URLSearchParams(location.search);
+  if(recoveryParams.get('type')==='recovery'||recoveryQuery.get('type')==='recovery')setTimeout(showRecoveryForm,0);
   document.addEventListener('submit',async event=>{
     if(event.target.id!=='passwordRecoveryForm')return;
     event.preventDefault();
