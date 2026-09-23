@@ -30,6 +30,8 @@ GitHub Pages: <https://ahmedihab152-netizen.github.io/Bradford-Finance/>
 | Staging security posture | FAIL | Leaked Password Protection and sufficient MFA options are still flagged on Staging. Production has no leaked-password warning, but retains the SECURITY DEFINER review warning. |
 | Production/Staging schema parity | FAIL | Staging has 194 public tables; Production has 193. The missing Production table is `operation_attachments`. Production deployment is blocked until migration parity is reviewed and rehearsed. |
 
+The 37 Production `SECURITY DEFINER` warnings were additionally enumerated. None is executable by `anon`, every function has an explicit `search_path`, and the sensitive workflow functions either perform an authenticated role/capability/authority check directly or delegate to a guarded function. The warning is therefore an explicit review/allow-list obligation rather than evidence of an observed anonymous bypass; it remains open until each intended authenticated RPC is documented and unnecessary grants are revoked.
+
 ## Non-destructive Staging UAT
 
 The payroll test used an isolated SQL transaction and temporary Auth/profile/capability/scope/employee/payroll rows. It exercised:
@@ -66,4 +68,3 @@ Post-rollback residue:
 ## Deployment decision
 
 No Production migration, merge, push or release rollback was performed because mandatory commercial gates failed. The currently deployed commit remains `dae808a`.
-
