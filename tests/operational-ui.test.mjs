@@ -15,6 +15,7 @@ const amanyBatch=readFileSync(new URL('../supabase/migrations/20260920123000_ama
 const hrPhase6=readFileSync(new URL('../hr-phase6.js',import.meta.url),'utf8');
 const attendanceFile=readFileSync(new URL('../supabase/migrations/20261015090000_attendance_file_import_without_device.sql',import.meta.url),'utf8');
 const attendancePolicy=readFileSync(new URL('../supabase/migrations/20261015100000_attendance_deduction_policy.sql',import.meta.url),'utf8');
+const attendanceBasis=readFileSync(new URL('../supabase/migrations/20261015102000_attendance_gross_daily_basis.sql',import.meta.url),'utf8');
 
 test('operational shell is loaded and public sign-up is removed at runtime',()=>{
  assert.match(html,/operational-ui\.js\?v=20260916-1/);
@@ -23,6 +24,16 @@ test('operational shell is loaded and public sign-up is removed at runtime',()=>
  assert.match(ui,/screenSearch/);
  assert.match(ui,/breadcrumb/);
  assert.match(ui,/quickCreate/);
+});
+
+test('attendance monetary preview uses effective Gross divided by 30 and still requires HR approval',()=>{
+ assert.match(attendanceBasis,/salary_basis='GROSS'/);
+ assert.match(attendanceBasis,/daily_divisor=30/);
+ assert.match(attendanceBasis,/basic_salary_piasters\+c\.fixed_allowance_piasters/);
+ assert.match(attendanceBasis,/status in \('ACTIVE','DRAFT'\)/);
+ assert.match(attendanceBasis,/'financial_effect',false/);
+ assert.match(attendanceBasis,/'requires_hr_approval',true/);
+ assert.doesNotMatch(attendanceBasis,/service_role/i);
 });
 
 test('school attendance policy and zero-punch holiday rule are server-side and financially inert',()=>{
