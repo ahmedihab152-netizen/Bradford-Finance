@@ -114,7 +114,7 @@ test('Dr Amany navigation exposes both dashboard and financial approvals',()=>{
 });
 
 test('attendance spreadsheet import works without a live biometric device and stays financially inert',()=>{
- assert.match(html,/hr-phase6\.js\?v=20261015-2/);
+ assert.match(html,/hr-phase6\.js\?v=20261015-3/);
  for(const token of ['تم التعرف على الشيت تلقائيًا','hr_preview_attendance_file','hr_finalize_attendance_file','employee_code','punch_time']) assert.match(hrPhase6,new RegExp(token));
  assert.match(hrPhase6,/\.csv,\.xlsx,\.xls,\.pdf/);
  assert.match(hrPhase6,/PDF.*لا يصلح لحساب الحضور/);

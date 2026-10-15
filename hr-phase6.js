@@ -41,11 +41,15 @@
  const parseSheet=async file=>{
   const X=await import('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm');
   const wb=X.read(await file.arrayBuffer(),{cellDates:true});
-  const sheet=wb.Sheets[wb.SheetNames[0]],rows=X.utils.sheet_to_json(sheet,{defval:'',raw:true});
+  // Read the displayed values. Some legacy ZKTeco XLS exports carry invalid
+  // date metadata; using raw Date objects can silently move 2026 rows to
+  // 2027/2028. The displayed dd/mm/yyyy value is the authoritative value.
+  const sheet=wb.Sheets[wb.SheetNames[0]],rows=X.utils.sheet_to_json(sheet,{defval:'',raw:false,dateNF:'dd/mm/yyyy'});
   return {X,rows,headers:Object.keys(rows[0]||{})};
  };
  const detectColumns=headers=>({
   employee:key(headers,['employee code','employee_code','code','user id','userid','employee id','enroll number','ac-no.','ac no','acno','no.','person id','رقم الموظف','كود الموظف']),
+  employeeName:key(headers,['employee name','name','full name','staff name','اسم الموظف','الموظف','الاسم']),
   datetime:key(headers,['punch time','punch_time','date time','datetime','timestamp','التاريخ والوقت','وقت البصمة']),
   date:key(headers,['date','attendance date','work date','punch date','التاريخ']),
   time:key(headers,['clock','punch','attendance time','punch time only','وقت','الوقت']),
@@ -55,11 +59,11 @@
  });
  const normalizedPunches=p=>{
   const c=p.columns,out=[];
-  for(const r of p.rows){const employee_code=String(r[c.employee]??'').trim();
+  for(const r of p.rows){const device_user_id=String(r[c.employee]??'').trim(),employee_name=String(r[c.employeeName]??'').trim(),employee_code=device_user_id;
    if(c.date&&(c.clockIn||c.clockOut)){
-    if(c.clockIn&&String(r[c.clockIn]??'').trim()!=='')out.push({employee_code,punch_time:combineDateTime(r[c.date],r[c.clockIn],p.X),punch_type:'IN'});
-    if(c.clockOut&&String(r[c.clockOut]??'').trim()!=='')out.push({employee_code,punch_time:combineDateTime(r[c.date],r[c.clockOut],p.X),punch_type:'OUT'});
-   }else out.push({employee_code,punch_time:c.datetime?excelLocalISO(r[c.datetime],p.X):combineDateTime(r[c.date],r[c.time],p.X),punch_type:c.type?punchType(r[c.type]):'AUTO'});
+    if(c.clockIn&&String(r[c.clockIn]??'').trim()!=='')out.push({employee_code,device_user_id,employee_name,punch_time:combineDateTime(r[c.date],r[c.clockIn],p.X),punch_type:'IN'});
+    if(c.clockOut&&String(r[c.clockOut]??'').trim()!=='')out.push({employee_code,device_user_id,employee_name,punch_time:combineDateTime(r[c.date],r[c.clockOut],p.X),punch_type:'OUT'});
+   }else out.push({employee_code,device_user_id,employee_name,punch_time:c.datetime?excelLocalISO(r[c.datetime],p.X):combineDateTime(r[c.date],r[c.time],p.X),punch_type:c.type?punchType(r[c.type]):'AUTO'});
   }
   return out.filter(r=>r.employee_code||r.punch_time);
  };
@@ -79,15 +83,36 @@
   };input.click();
  };
  window.submitAttendanceFilePreview=async()=>{const p=window.pendingAttendanceFile;if(!p)return uiToast('اختر شيت البصمة أولًا.','warning');
-  const rows=normalizedPunches(p),format=p.file.name.split('.').pop().toUpperCase(),mapping={automatic:true,...p.columns};
+  let rows=normalizedPunches(p);const format=p.file.name.split('.').pop().toUpperCase(),mapping={automatic:true,...p.columns};
   if(!rows.length)return uiToast('لم يعثر النظام على أي بصمات قابلة للقراءة داخل الشيت.','error',9000);
-  try{uiToast('جاري التحقق Server-side…','info');const call=await supabase.rpc('hr_preview_attendance_file',{p_file_name:p.file.name,p_sha256:p.sha256,p_source_format:format,p_column_mapping:mapping,p_rows:rows});if(call.error)throw call.error;
+  try{uiToast('جاري مطابقة الموظفين والتحقق Server-side…','info');
+   const er=await supabase.from('hr_employees').select('employee_code,full_name').eq('status','ACTIVE');if(er.error)throw er.error;
+   const employees=er.data||[],norm=v=>String(v||'').normalize('NFKD').replace(/[\u064B-\u065F]/g,'').replace(/[^\p{L}\p{N}]/gu,'').toLowerCase();
+   const byCode=new Map(employees.map(e=>[norm(e.employee_code),e.employee_code])),byName=new Map();
+   for(const e of employees){const k=norm(e.full_name);if(k)byName.set(k,byName.has(k)?null:e.employee_code)}
+   const byNumber=new Map();for(const e of employees){const m=String(e.employee_code||'').match(/(\d+)$/);if(m){const k=String(Number(m[1]));byNumber.set(k,byNumber.has(k)?null:e.employee_code)}}
+   rows=rows.map(x=>{const linked=byCode.get(norm(x.employee_code))||byName.get(norm(x.employee_name))||byNumber.get(String(Number(x.device_user_id)));return linked?{...x,employee_code:linked}:x});
+   const call=await supabase.rpc('hr_preview_attendance_file',{p_file_name:p.file.name,p_sha256:p.sha256,p_source_format:format,p_column_mapping:mapping,p_rows:rows});if(call.error)throw call.error;
    const [batch,issues]=await Promise.all([supabase.from('hr_attendance_file_batches').select('*').eq('id',call.data).single(),supabase.from('hr_attendance_file_rows').select('row_number,employee_code,punch_time,validation_status,validation_errors').eq('batch_id',call.data).neq('validation_status','VALID').order('row_number').limit(200)]);if(batch.error)throw batch.error;if(issues.error)throw issues.error;
    window.attendanceFileBatch=call.data;const b=batch.data;
-   openM('نتيجة معاينة شيت البصمة','<div class="grid cards">'+metric('إجمالي',n(b.total_rows),'')+metric('صالح',n(b.valid_rows),'لم يُعتمد بعد','green')+metric('مكرر',n(b.duplicate_rows),'لن يتكرر','amber')+metric('غير مرتبط',n(b.unlinked_rows),'راجع كود الموظف','red')+metric('غير صالح',n(b.invalid_rows),'راجع التاريخ والكود','red')+'</div><div class="tablewrap"><table class="tbl"><thead><tr><th>صف</th><th>الكود</th><th>وقت البصمة</th><th>الحالة</th><th>السبب</th></tr></thead><tbody>'+((issues.data||[]).map(x=>'<tr><td>'+n(x.row_number)+'</td><td>'+esc(x.employee_code||'—')+'</td><td>'+esc(x.punch_time||'—')+'</td><td>'+esc(x.validation_status)+'</td><td>'+esc((x.validation_errors||[]).join('، ')||'—')+'</td></tr>').join('')||'<tr><td colspan="5">كل الصفوف صالحة.</td></tr>')+'</tbody></table></div>'+(profile.role==='HR_MANAGER'&&b.valid_rows?'<button class="btn primary w" onclick="confirmAttendanceFileImport()">تأكيد وحساب الحضور</button>':'<div class="note orange">المعاينة فقط؛ التأكيد متاح لمديرة HR صاحبة BIOMETRIC_MANAGER.</div>')+'<div class="note">التأكيد يحسب الدقائق وينشئ مسودات فقط. لا يعتمد مرتبًا ولا ينشئ قيدًا ماليًا.</div>');
+   if(profile.role==='HR_MANAGER'&&b.valid_rows&&Number(b.unlinked_rows||0)===0&&Number(b.invalid_rows||0)===0){uiToast('تمت مطابقة كل الموظفين؛ جاري إدخال الحضور وحساب مسودة المرتبات…','info',8000);return window.confirmAttendanceFileImport()}
+   openM('نتيجة معاينة شيت البصمة','<div class="grid cards">'+metric('إجمالي',n(b.total_rows),'')+metric('صالح',n(b.valid_rows),'جاهز للحساب','green')+metric('مكرر',n(b.duplicate_rows),'لن يتكرر','amber')+metric('غير مرتبط',n(b.unlinked_rows),'رقم الجهاز/الاسم غير مطابق','red')+metric('غير صالح',n(b.invalid_rows),'راجع التاريخ والكود','red')+'</div><div class="tablewrap"><table class="tbl"><thead><tr><th>صف</th><th>الكود</th><th>وقت البصمة</th><th>الحالة</th><th>السبب</th></tr></thead><tbody>'+((issues.data||[]).map(x=>'<tr><td>'+n(x.row_number)+'</td><td>'+esc(x.employee_code||'—')+'</td><td>'+esc(x.punch_time||'—')+'</td><td>'+esc(x.validation_status)+'</td><td>'+esc((x.validation_errors||[]).join('، ')||'—')+'</td></tr>').join('')||'<tr><td colspan="5">كل الصفوف صالحة.</td></tr>')+'</tbody></table></div>'+(profile.role==='HR_MANAGER'&&b.valid_rows?'<button class="btn primary w" onclick="confirmAttendanceFileImport()">إدخال السجلات المطابقة وحساب الحضور</button>':'<div class="note orange">التأكيد متاح لمديرة HR صاحبة BIOMETRIC_MANAGER.</div>')+'<div class="note orange">لن يخمّن النظام هوية أي رقم غير مرتبط. أضف اسم الموظف في تقرير الجهاز أو وحّد رقم الجهاز مع كود الموظف ثم أعد الرفع.</div><div class="note">الحساب ينشئ مسودات فقط؛ لا يعتمد مرتبًا ولا ينشئ قيدًا ماليًا.</div>');
   }catch(e){uiToast(e.message||e,'error',9000)}
  };
  window.confirmAttendanceFileImport=async()=>{if(!window.attendanceFileBatch)return uiToast('لا توجد معاينة جاهزة.','warning');
   try{const r=await supabase.rpc('hr_finalize_attendance_file',{p_batch:window.attendanceFileBatch});if(r.error)throw r.error;const x=r.data||{},p=x.policy||{};window.attendanceFileBatch=null;window.pendingAttendanceFile=null;closeM();uiToast('تم استيراد '+n(x.imported_punches)+' بصمة وحساب '+n(x.attendance_days)+' يوم، وتسجيل '+n(p.auto_holidays||0)+' يوم بلا بصمات كإجازة. كل الخصومات مسودات للمراجعة.','success',10000);await openHRModule('biometric')}catch(e){uiToast(e.message||e,'error',9000)}
  };
 })();
+
+// Read-only payroll projection generated from effective compensation and
+// attendance movements. It never creates a payroll run or posts accounting.
+window.renderAttendancePayrollProjection=async selector=>{const host=document.querySelector(selector);if(!host)return;host.innerHTML='<div class="card">جاري حساب مسودة المرتبات من البصمة…</div>';
+ try{const month=(new Date()).toISOString().slice(0,7),from=month+'-01',to=new Date(Date.UTC(Number(month.slice(0,4)),Number(month.slice(5,7)),1)).toISOString().slice(0,10);
+  const [er,cr,mr,ar]=await Promise.all([supabase.from('hr_employees').select('id,employee_code,full_name,department').eq('status','ACTIVE'),supabase.from('employee_compensation').select('employee_code,basic_salary_piasters,fixed_allowance_piasters,effective_from,effective_to,status').lte('effective_from',to).or('effective_to.is.null,effective_to.gte.'+from),supabase.from('hr_employee_movements').select('employee_id,movement_type,proposed_amount_piasters,status,occurred_at').gte('occurred_at',from).lt('occurred_at',to),supabase.from('hr_daily_attendance').select('employee_id,attendance_date,first_in,last_out,worked_minutes,late_minutes,early_leave_minutes,overtime_minutes,status').gte('attendance_date',from).lt('attendance_date',to)]);for(const x of[er,cr,mr,ar])if(x.error)throw x.error;
+  const comp=new Map((cr.data||[]).map(x=>[String(x.employee_code).toLowerCase(),x])),moves=new Map(),days=new Map();
+  for(const x of mr.data||[]){const z=moves.get(x.employee_id)||{deductions:0,additions:0,count:0};const amount=Number(x.proposed_amount_piasters||0);if(['OVERTIME','BONUS','COVER','ALLOWANCE'].includes(x.movement_type))z.additions+=amount;else z.deductions+=amount;z.count++;moves.set(x.employee_id,z)}
+  for(const x of ar.data||[]){const z=days.get(x.employee_id)||{count:0,minutes:0,late:0,early:0,overtime:0};z.count++;z.minutes+=Number(x.worked_minutes||0);z.late+=Number(x.late_minutes||0);z.early+=Number(x.early_leave_minutes||0);z.overtime+=Number(x.overtime_minutes||0);days.set(x.employee_id,z)}
+  const rows=(er.data||[]).map(e=>{const c=comp.get(String(e.employee_code).toLowerCase()),m=moves.get(e.id)||{deductions:0,additions:0,count:0},d=days.get(e.id)||{count:0,minutes:0,late:0,early:0,overtime:0},gross=Number(c?.basic_salary_piasters||0)+Number(c?.fixed_allowance_piasters||0);return{...e,gross,...m,...d,net:gross+m.additions-m.deductions}}).filter(x=>x.gross||x.count||x.deductions||x.additions);
+  host.innerHTML='<div class="sec"><h3>مسودة حساب المرتبات من البصمة — '+esc(month)+'</h3><div class="note orange">للمراجعة فقط: Gross ÷ 30. لا اعتماد ولا قيد مالي قبل دورة المرتبات.</div></div><div class="tablewrap"><table class="tbl"><thead><tr><th>الكود</th><th>الموظف</th><th>أيام الحضور</th><th>ساعات العمل</th><th>دقائق التأخير</th><th>الخروج المبكر</th><th>الإضافي</th><th>Gross</th><th>إضافات مسودة</th><th>خصومات مسودة</th><th>الصافي المتوقع</th></tr></thead><tbody>'+((rows.map(x=>'<tr><td>'+esc(x.employee_code)+'</td><td>'+esc(x.full_name)+'</td><td>'+n(x.count)+'</td><td>'+n((x.minutes/60).toFixed(1))+'</td><td>'+n(x.late)+'</td><td>'+n(x.early)+'</td><td>'+n(x.overtime)+'</td><td>'+egp(x.gross)+'</td><td>'+egp(x.additions)+'</td><td>'+egp(x.deductions)+'</td><td>'+egp(x.net)+'</td></tr>').join(''))||'<tr><td colspan="11">لا توجد بيانات بصمة محسوبة لهذا الشهر بعد.</td></tr>')+'</tbody></table></div>';
+ }catch(e){host.innerHTML='<div class="msg err">تعذر حساب مسودة المرتبات: '+esc(e.message||e)+'</div>'}
+};
