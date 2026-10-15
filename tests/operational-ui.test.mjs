@@ -12,6 +12,8 @@ const quoteApproval=readFileSync(new URL('../supabase/migrations/20260916134000_
 const amanyUi=readFileSync(new URL('../amany-financial-approvals.js',import.meta.url),'utf8');
 const amanyDashboard=readFileSync(new URL('../dr-amany-dashboard.js',import.meta.url),'utf8');
 const amanyBatch=readFileSync(new URL('../supabase/migrations/20260920123000_amany_mobile_grouped_financial_approvals.sql',import.meta.url),'utf8');
+const hrPhase6=readFileSync(new URL('../hr-phase6.js',import.meta.url),'utf8');
+const attendanceFile=readFileSync(new URL('../supabase/migrations/20261015090000_attendance_file_import_without_device.sql',import.meta.url),'utf8');
 
 test('operational shell is loaded and public sign-up is removed at runtime',()=>{
  assert.match(html,/operational-ui\.js\?v=20260916-1/);
@@ -86,4 +88,19 @@ test('Dr Amany mobile approvals are grouped, filtered and transactionally review
 
 test('Dr Amany navigation exposes both dashboard and financial approvals',()=>{
   assert.match(amanyDashboard,/access\.DR_AMANY_APPROVER=.*'amany_dashboard','approvals'/);
+});
+
+test('attendance spreadsheet import works without a live biometric device and stays financially inert',()=>{
+ assert.match(html,/hr-phase6\.js\?v=20261015-1/);
+ for(const token of ['استيراد شيت البصمة بدون جهاز','hr_preview_attendance_file','hr_confirm_attendance_file','employee_code','punch_time']) assert.match(hrPhase6,new RegExp(token));
+ assert.match(hrPhase6,/\.csv,\.xlsx,\.xls,\.pdf/);
+ assert.match(hrPhase6,/PDF.*لا يصلح لحساب الحضور/);
+ for(const table of ['hr_attendance_file_batches','hr_attendance_file_rows','hr_attendance_file_punches']) assert.match(attendanceFile,new RegExp(`create table if not exists public\\.${table}`));
+ assert.match(attendanceFile,/File must contain between 1 and 20000 rows/);
+ assert.match(attendanceFile,/unique \(employee_id, punch_time, punch_type\)/);
+ assert.match(attendanceFile,/hr_daily_attendance/);
+ assert.match(attendanceFile,/source_record_id,status,created_by,updated_by\)\s*\n\s*values\([\s\S]*?'DRAFT'/);
+ assert.match(attendanceFile,/'financial_effect',false/);
+ assert.match(attendanceFile,/HR biometric manager confirmation required/);
+ assert.doesNotMatch(hrPhase6,/service_role/i);
 });
