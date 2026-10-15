@@ -13,6 +13,7 @@ const amanyUi=readFileSync(new URL('../amany-financial-approvals.js',import.meta
 const amanyDashboard=readFileSync(new URL('../dr-amany-dashboard.js',import.meta.url),'utf8');
 const amanyBatch=readFileSync(new URL('../supabase/migrations/20260920123000_amany_mobile_grouped_financial_approvals.sql',import.meta.url),'utf8');
 const hrPhase6=readFileSync(new URL('../hr-phase6.js',import.meta.url),'utf8');
+const hrOperations=readFileSync(new URL('../hr-operations.js',import.meta.url),'utf8');
 const attendanceFile=readFileSync(new URL('../supabase/migrations/20261015090000_attendance_file_import_without_device.sql',import.meta.url),'utf8');
 const attendancePolicy=readFileSync(new URL('../supabase/migrations/20261015100000_attendance_deduction_policy.sql',import.meta.url),'utf8');
 const attendanceBasis=readFileSync(new URL('../supabase/migrations/20261015102000_attendance_gross_daily_basis.sql',import.meta.url),'utf8');
@@ -135,4 +136,16 @@ test('biometric spreadsheets auto-detect ZKTeco event and daily report columns w
  assert.match(hrPhase6,/await window\.submitAttendanceFilePreview\(\)/);
  assert.match(hrPhase6,/punch_type:'IN'/);
  assert.match(hrPhase6,/punch_type:'OUT'/);
+});
+
+test('HR navigation is shared, sticky, role-filtered and survives internal page changes',()=>{
+ assert.match(html,/id="hrSharedNav"/);
+ assert.match(html,/class="hr-nav-shell"/);
+ assert.match(html,/\.hr-nav-shell\{position:sticky;top:68px/);
+ assert.match(html,/overflow-x:auto/);
+ assert.match(html,/direction:rtl/);
+ assert.match(html,/sessionStorage\.setItem\('bradford_hr_module'/);
+ assert.match(html,/sessionStorage\.getItem\('bradford_hr_module'/);
+ assert.match(html,/ensureHRNavigation/);
+ assert.match(hrOperations,/ensureHRNavigation/);
 });
