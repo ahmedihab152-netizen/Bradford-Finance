@@ -14,6 +14,7 @@ const amanyDashboard=readFileSync(new URL('../dr-amany-dashboard.js',import.meta
 const amanyBatch=readFileSync(new URL('../supabase/migrations/20260920123000_amany_mobile_grouped_financial_approvals.sql',import.meta.url),'utf8');
 const hrPhase6=readFileSync(new URL('../hr-phase6.js',import.meta.url),'utf8');
 const attendanceFile=readFileSync(new URL('../supabase/migrations/20261015090000_attendance_file_import_without_device.sql',import.meta.url),'utf8');
+const attendancePolicy=readFileSync(new URL('../supabase/migrations/20261015100000_attendance_deduction_policy.sql',import.meta.url),'utf8');
 
 test('operational shell is loaded and public sign-up is removed at runtime',()=>{
  assert.match(html,/operational-ui\.js\?v=20260916-1/);
@@ -22,6 +23,17 @@ test('operational shell is loaded and public sign-up is removed at runtime',()=>
  assert.match(ui,/screenSearch/);
  assert.match(ui,/breadcrumb/);
  assert.match(ui,/quickCreate/);
+});
+
+test('school attendance policy and zero-punch holiday rule are server-side and financially inert',()=>{
+ for(const rule of ['ABSENCE_INFORMED','ABSENCE_UNEXCUSED','LATE_EARLY_04_10','LATE_EARLY_GT150','PERMISSION_01_02','PERMISSION_05_PLUS','MISSING_PUNCH']) assert.match(attendancePolicy,new RegExp(rule));
+ for(const pct of ['5','10','20','30','40','50']) assert.match(attendancePolicy,new RegExp(`,${pct},0`));
+ assert.match(attendancePolicy,/not exists\(select 1 from public\.hr_attendance_file_punches/);
+ assert.match(attendancePolicy,/NO_PUNCH_DAY/);
+ assert.match(attendancePolicy,/hr_finalize_attendance_file/);
+ assert.match(attendancePolicy,/'financial_effect',false/);
+ assert.match(hrPhase6,/hr_finalize_attendance_file/);
+ assert.doesNotMatch(attendancePolicy,/service_role/i);
 });
 
 test('core create actions persist through Supabase or guarded RPCs',()=>{
@@ -92,7 +104,7 @@ test('Dr Amany navigation exposes both dashboard and financial approvals',()=>{
 
 test('attendance spreadsheet import works without a live biometric device and stays financially inert',()=>{
  assert.match(html,/hr-phase6\.js\?v=20261015-1/);
- for(const token of ['استيراد شيت البصمة بدون جهاز','hr_preview_attendance_file','hr_confirm_attendance_file','employee_code','punch_time']) assert.match(hrPhase6,new RegExp(token));
+ for(const token of ['استيراد شيت البصمة بدون جهاز','hr_preview_attendance_file','hr_finalize_attendance_file','employee_code','punch_time']) assert.match(hrPhase6,new RegExp(token));
  assert.match(hrPhase6,/\.csv,\.xlsx,\.xls,\.pdf/);
  assert.match(hrPhase6,/PDF.*لا يصلح لحساب الحضور/);
  for(const table of ['hr_attendance_file_batches','hr_attendance_file_rows','hr_attendance_file_punches']) assert.match(attendanceFile,new RegExp(`create table if not exists public\\.${table}`));

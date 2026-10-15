@@ -75,6 +75,6 @@
   }catch(e){uiToast(e.message||e,'error',9000)}
  };
  window.confirmAttendanceFileImport=async()=>{if(!window.attendanceFileBatch)return uiToast('لا توجد معاينة جاهزة.','warning');
-  try{const r=await supabase.rpc('hr_confirm_attendance_file',{p_batch:window.attendanceFileBatch});if(r.error)throw r.error;const x=r.data||{};window.attendanceFileBatch=null;window.pendingAttendanceFile=null;closeM();uiToast('تم استيراد '+n(x.imported_punches)+' بصمة وحساب '+n(x.attendance_days)+' يوم وإنشاء '+n(x.draft_movements)+' مسودة للمراجعة.','success',9000);await openHRModule('biometric')}catch(e){uiToast(e.message||e,'error',9000)}
+  try{const r=await supabase.rpc('hr_finalize_attendance_file',{p_batch:window.attendanceFileBatch});if(r.error)throw r.error;const x=r.data||{},p=x.policy||{};window.attendanceFileBatch=null;window.pendingAttendanceFile=null;closeM();uiToast('تم استيراد '+n(x.imported_punches)+' بصمة وحساب '+n(x.attendance_days)+' يوم، وتسجيل '+n(p.auto_holidays||0)+' يوم بلا بصمات كإجازة. كل الخصومات مسودات للمراجعة.','success',10000);await openHRModule('biometric')}catch(e){uiToast(e.message||e,'error',9000)}
  };
 })();
