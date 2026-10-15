@@ -114,8 +114,8 @@ test('Dr Amany navigation exposes both dashboard and financial approvals',()=>{
 });
 
 test('attendance spreadsheet import works without a live biometric device and stays financially inert',()=>{
- assert.match(html,/hr-phase6\.js\?v=20261015-1/);
- for(const token of ['استيراد شيت البصمة بدون جهاز','hr_preview_attendance_file','hr_finalize_attendance_file','employee_code','punch_time']) assert.match(hrPhase6,new RegExp(token));
+ assert.match(html,/hr-phase6\.js\?v=20261015-2/);
+ for(const token of ['تم التعرف على الشيت تلقائيًا','hr_preview_attendance_file','hr_finalize_attendance_file','employee_code','punch_time']) assert.match(hrPhase6,new RegExp(token));
  assert.match(hrPhase6,/\.csv,\.xlsx,\.xls,\.pdf/);
  assert.match(hrPhase6,/PDF.*لا يصلح لحساب الحضور/);
  for(const table of ['hr_attendance_file_batches','hr_attendance_file_rows','hr_attendance_file_punches']) assert.match(attendanceFile,new RegExp(`create table if not exists public\\.${table}`));
@@ -126,4 +126,13 @@ test('attendance spreadsheet import works without a live biometric device and st
  assert.match(attendanceFile,/'financial_effect',false/);
  assert.match(attendanceFile,/HR biometric manager confirmation required/);
  assert.doesNotMatch(hrPhase6,/service_role/i);
+});
+
+test('biometric spreadsheets auto-detect ZKTeco event and daily report columns without manual mapping',()=>{
+ for(const token of ['detectColumns','normalizedPunches','ac-no.','clock in','clock out','automatic:true']) assert.match(hrPhase6,new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'i'));
+ assert.doesNotMatch(hrPhase6,/id="afEmployee"/);
+ assert.doesNotMatch(hrPhase6,/اختر الأعمدة ثم اضغط/);
+ assert.match(hrPhase6,/await window\.submitAttendanceFilePreview\(\)/);
+ assert.match(hrPhase6,/punch_type:'IN'/);
+ assert.match(hrPhase6,/punch_type:'OUT'/);
 });

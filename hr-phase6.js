@@ -13,8 +13,8 @@
 // server-side and never post financial entries.
 (()=>{
  const fileDigest=async f=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',await f.arrayBuffer()))].map(x=>x.toString(16).padStart(2,'0')).join('');
- const key=(headers,names)=>headers.find(h=>names.includes(String(h).trim().toLowerCase()))||'';
- const option=(headers,selected,label)=>'<option value="">— '+label+' —</option>'+headers.map(h=>'<option value="'+esc(h)+'" '+(h===selected?'selected':'')+'>'+esc(h)+'</option>').join('');
+ const normHeader=value=>String(value??'').trim().toLowerCase().replace(/[._\-\/\\]+/g,' ').replace(/\s+/g,' ');
+ const key=(headers,names)=>headers.find(h=>names.map(normHeader).includes(normHeader(h)))||'';
  const excelLocalISO=(value,X)=>{
   if(value instanceof Date&&!Number.isNaN(value.valueOf()))return value.toISOString();
   if(typeof value==='number'){
@@ -32,7 +32,8 @@
   if(typeof dateValue==='number'){const p=X.SSF.parse_date_code(dateValue);if(p)d=new Date(p.y,p.m-1,p.d)}
   if(!d){const iso=excelLocalISO(dateValue,X);if(iso)d=new Date(iso)}
   if(!d||Number.isNaN(d.valueOf()))return '';
-  if(typeof timeValue==='number'){const p=X.SSF.parse_date_code(timeValue);if(p)d.setHours(p.H||0,p.M||0,Math.floor(p.S||0),0)}
+  if(timeValue instanceof Date&&!Number.isNaN(timeValue.valueOf()))d.setHours(timeValue.getHours(),timeValue.getMinutes(),timeValue.getSeconds(),0);
+  else if(typeof timeValue==='number'){const p=X.SSF.parse_date_code(timeValue);if(p)d.setHours(p.H||0,p.M||0,Math.floor(p.S||0),0)}
   else {const m=String(timeValue).trim().match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?/);if(!m)return '';d.setHours(Number(m[1]),Number(m[2]),Number(m[3]||0),0)}
   return d.toISOString();
  };
@@ -43,6 +44,25 @@
   const sheet=wb.Sheets[wb.SheetNames[0]],rows=X.utils.sheet_to_json(sheet,{defval:'',raw:true});
   return {X,rows,headers:Object.keys(rows[0]||{})};
  };
+ const detectColumns=headers=>({
+  employee:key(headers,['employee code','employee_code','code','user id','userid','employee id','enroll number','ac-no.','ac no','acno','no.','person id','رقم الموظف','كود الموظف']),
+  datetime:key(headers,['punch time','punch_time','date time','datetime','timestamp','التاريخ والوقت','وقت البصمة']),
+  date:key(headers,['date','attendance date','work date','punch date','التاريخ']),
+  time:key(headers,['clock','punch','attendance time','punch time only','وقت','الوقت']),
+  type:key(headers,['punch type','punch_type','state','direction','check type','نوع البصمة','الحالة']),
+  clockIn:key(headers,['clock in','check in','check-in','time in','actual in','in time','sign in','دخول','وقت الدخول']),
+  clockOut:key(headers,['clock out','check out','check-out','time out','actual out','out time','sign out','خروج','وقت الخروج'])
+ });
+ const normalizedPunches=p=>{
+  const c=p.columns,out=[];
+  for(const r of p.rows){const employee_code=String(r[c.employee]??'').trim();
+   if(c.date&&(c.clockIn||c.clockOut)){
+    if(c.clockIn&&String(r[c.clockIn]??'').trim()!=='')out.push({employee_code,punch_time:combineDateTime(r[c.date],r[c.clockIn],p.X),punch_type:'IN'});
+    if(c.clockOut&&String(r[c.clockOut]??'').trim()!=='')out.push({employee_code,punch_time:combineDateTime(r[c.date],r[c.clockOut],p.X),punch_type:'OUT'});
+   }else out.push({employee_code,punch_time:c.datetime?excelLocalISO(r[c.datetime],p.X):combineDateTime(r[c.date],r[c.time],p.X),punch_type:c.type?punchType(r[c.type]):'AUTO'});
+  }
+  return out.filter(r=>r.employee_code||r.punch_time);
+ };
  window.previewBioImport=()=>{
   const input=document.createElement('input');input.type='file';input.accept='.csv,.xlsx,.xls,.pdf';
   input.onchange=async()=>{const file=input.files?.[0];if(!file)return;
@@ -50,24 +70,17 @@
    try{
     uiToast('جاري قراءة الشيت محليًا…','info');const parsed=await parseSheet(file);
     if(!parsed.rows.length)throw new Error('الشيت لا يحتوي على سجلات.');
-    const lower=parsed.headers.map(h=>String(h).trim().toLowerCase());
-    const chosen={
-     employee:key(parsed.headers,['employee code','employee_code','code','user id','userid','employee id','enroll number','ac-no.','رقم الموظف','كود الموظف']),
-     datetime:key(parsed.headers,['punch time','punch_time','date time','datetime','time','timestamp','التاريخ والوقت','وقت البصمة']),
-     date:key(parsed.headers,['date','attendance date','work date','التاريخ']),
-     time:key(parsed.headers,['clock','punch','attendance time','وقت','الوقت']),
-     type:key(parsed.headers,['punch type','punch_type','state','direction','check type','نوع البصمة','الحالة'])
-    };
-    window.pendingAttendanceFile={file,...parsed,sha256:await fileDigest(file)};
-    openM('استيراد شيت البصمة بدون جهاز','<div class="note">تمت قراءة '+n(parsed.rows.length)+' صفًا. اختر الأعمدة ثم اضغط «معاينة آمنة»؛ لن يُكتب حضور أو مرتب في هذه الخطوة.</div><div class="salary-grid"><div class="f"><label>كود الموظف *</label><select id="afEmployee">'+option(parsed.headers,chosen.employee,'اختر العمود')+'</select></div><div class="f"><label>التاريخ والوقت</label><select id="afDateTime">'+option(parsed.headers,chosen.datetime,'عمود موحد')+'</select></div><div class="f"><label>التاريخ المنفصل</label><select id="afDate">'+option(parsed.headers,chosen.date,'اختياري')+'</select></div><div class="f"><label>الوقت المنفصل</label><select id="afTime">'+option(parsed.headers,chosen.time,'اختياري')+'</select></div><div class="f"><label>دخول / خروج</label><select id="afType">'+option(parsed.headers,chosen.type,'اختياري / AUTO')+'</select></div></div><div class="note orange">يجب أن يطابق كود الشيت employee_code في ملف الموظف. الأكواد غير المطابقة ستظهر «غير مرتبطة» ولن تُستورد.</div><button class="btn primary w" onclick="submitAttendanceFilePreview()">معاينة آمنة</button>');
+    const columns=detectColumns(parsed.headers),hasEvent=columns.employee&&(columns.datetime||(columns.date&&columns.time)),hasDaily=columns.employee&&columns.date&&(columns.clockIn||columns.clockOut);
+    if(!hasEvent&&!hasDaily)throw new Error('تعذر التعرف تلقائيًا على أعمدة الشيت. الأعمدة الموجودة: '+parsed.headers.join('، '));
+    window.pendingAttendanceFile={file,...parsed,columns,sha256:await fileDigest(file)};
+    uiToast('تم التعرف على الشيت تلقائيًا؛ جاري فحص '+n(parsed.rows.length)+' صف…','info',6000);
+    await window.submitAttendanceFilePreview();
    }catch(e){uiToast(e.message||e,'error',9000)}
   };input.click();
  };
  window.submitAttendanceFilePreview=async()=>{const p=window.pendingAttendanceFile;if(!p)return uiToast('اختر شيت البصمة أولًا.','warning');
-  const employee=document.querySelector('#afEmployee')?.value,datetime=document.querySelector('#afDateTime')?.value,date=document.querySelector('#afDate')?.value,time=document.querySelector('#afTime')?.value,type=document.querySelector('#afType')?.value;
-  if(!employee||(!datetime&&!(date&&time)))return uiToast('اختر كود الموظف والتاريخ/الوقت.','warning');
-  const rows=p.rows.map(r=>({employee_code:String(r[employee]??'').trim(),punch_time:datetime?excelLocalISO(r[datetime],p.X):combineDateTime(r[date],r[time],p.X),punch_type:type?punchType(r[type]):'AUTO'}));
-  const format=p.file.name.split('.').pop().toUpperCase(),mapping={employee_code:employee,punch_time:datetime||null,date:date||null,time:time||null,punch_type:type||null};
+  const rows=normalizedPunches(p),format=p.file.name.split('.').pop().toUpperCase(),mapping={automatic:true,...p.columns};
+  if(!rows.length)return uiToast('لم يعثر النظام على أي بصمات قابلة للقراءة داخل الشيت.','error',9000);
   try{uiToast('جاري التحقق Server-side…','info');const call=await supabase.rpc('hr_preview_attendance_file',{p_file_name:p.file.name,p_sha256:p.sha256,p_source_format:format,p_column_mapping:mapping,p_rows:rows});if(call.error)throw call.error;
    const [batch,issues]=await Promise.all([supabase.from('hr_attendance_file_batches').select('*').eq('id',call.data).single(),supabase.from('hr_attendance_file_rows').select('row_number,employee_code,punch_time,validation_status,validation_errors').eq('batch_id',call.data).neq('validation_status','VALID').order('row_number').limit(200)]);if(batch.error)throw batch.error;if(issues.error)throw issues.error;
    window.attendanceFileBatch=call.data;const b=batch.data;
