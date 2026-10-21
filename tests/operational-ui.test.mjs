@@ -149,3 +149,8 @@ test('HR navigation is shared, sticky, role-filtered and survives internal page 
  assert.match(html,/ensureHRNavigation/);
  assert.match(hrOperations,/ensureHRNavigation/);
 });
+
+test('mobile HR and top action buttons remain visible without horizontal clipping',()=>{
+  assert.match(html,/\.hr-tabs\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\);overflow:visible/);
+  assert.match(html,/\.top \.actions \.btn\{display:inline-block!important;flex:1 1 auto\}/);
+});

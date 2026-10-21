@@ -765,7 +765,9 @@ tr.bfApprovedByAmany>td{background:#dcfce7!important;color:#14532d!important;bor
 </script>
 <style>
 .hr-nav-shell{position:sticky;top:68px;z-index:4;background:var(--bg);margin:-8px -4px 14px;padding:8px 4px 2px;border-bottom:1px solid var(--l)}.hr-tabs{display:flex;direction:rtl;gap:6px;overflow-x:auto;overflow-y:hidden;padding:5px 0 10px;scrollbar-width:thin;overscroll-behavior-inline:contain}.hr-tabs .btn{white-space:nowrap;flex:0 0 auto}.hr-kicker{color:var(--blue);font-weight:900}.salary-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.hr-empty{padding:30px;text-align:center;color:var(--muted)}
-@media(max-width:760px){.salary-grid{grid-template-columns:1fr 1fr}.hr-nav-shell{top:0;margin-inline:-8px;padding-inline:8px}.hr-tabs{margin-inline:0;padding-inline:0}}
+@media(max-width:760px){.salary-grid{grid-template-columns:1fr 1fr}.hr-nav-shell{top:0;margin-inline:-8px;padding-inline:8px}.hr-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible;margin-inline:0;padding-inline:0}.hr-tabs .btn{width:100%;white-space:normal}}
+@media(max-width:440px){.hr-tabs{grid-template-columns:1fr}}
+@media(max-width:440px){.top .actions{width:100%}.top .actions .btn{display:inline-block!important;flex:1 1 auto}}
 </style>
 <script>
 (()=>{
