@@ -17,6 +17,7 @@ const hrOperations=readFileSync(new URL('../hr-operations.js',import.meta.url),'
 const attendanceFile=readFileSync(new URL('../supabase/migrations/20261015090000_attendance_file_import_without_device.sql',import.meta.url),'utf8');
 const attendancePolicy=readFileSync(new URL('../supabase/migrations/20261015100000_attendance_deduction_policy.sql',import.meta.url),'utf8');
 const attendanceBasis=readFileSync(new URL('../supabase/migrations/20261015102000_attendance_gross_daily_basis.sql',import.meta.url),'utf8');
+const payrollAdjustments=readFileSync(new URL('../supabase/migrations/20261021111312_add_payroll_manual_adjustments.sql',import.meta.url),'utf8');
 
 test('operational shell is loaded and public sign-up is removed at runtime',()=>{
  assert.match(html,/operational-ui\.js\?v=20260916-1/);
@@ -115,7 +116,7 @@ test('Dr Amany navigation exposes both dashboard and financial approvals',()=>{
 });
 
 test('attendance spreadsheet import works without a live biometric device and stays financially inert',()=>{
- assert.match(html,/hr-phase6\.js\?v=20261021-5/);
+ assert.match(html,/hr-phase6\.js\?v=20261021-6/);
  for(const token of ['تم التعرف على الشيت تلقائيًا','hr_preview_attendance_file','hr_finalize_attendance_file','employee_code','punch_time']) assert.match(hrPhase6,new RegExp(token));
  assert.match(hrPhase6,/\.csv,\.xlsx,\.xls,\.pdf/);
  assert.match(hrPhase6,/PDF.*لا يصلح لحساب الحضور/);
@@ -145,6 +146,17 @@ test('HR payroll review and approval actions stay visible on narrow screens',()=
  assert.equal((hrPhase6.match(/اعتماد ريهام وتحويل إلى د\. أماني/g)||[]).length,1);
  assert.match(hrPhase6,/\+hrActions\+.*reviewEmployeeHost/);
  assert.match(hrPhase6,/reviewItemHost"><\/div>'\+hrActions/);
+});
+
+test('payroll adjustment and biometric review buttons are directly wired and audited',()=>{
+ for(const token of ['data-payroll-adjustment','data-payroll-review','خصم / زيادة','نعم — تطبيق الخصم المقترح','لا تخصم — إذن معتمد','hr_set_payroll_adjustment','manual_deduction_piasters']) assert.match(hrPhase6,new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')));
+ assert.doesNotMatch(hrPhase6,/onclick="(?:editPayrollIncrease|reviewPayrollItem)/);
+ assert.match(payrollAdjustments,/function public\.hr_set_payroll_adjustment/);
+ assert.match(payrollAdjustments,/SET_MANUAL_ADJUSTMENT/);
+ assert.match(payrollAdjustments,/role_name not in \('OWNER','CEO','HR_MANAGER'\)/);
+ assert.match(payrollAdjustments,/revoke all on function public\.hr_set_payroll_adjustment.*public,anon/);
+ assert.match(payrollAdjustments,/approved_deduction_piasters=x\.approved_total \+ e\.manual_deduction_piasters/);
+ assert.doesNotMatch(payrollAdjustments,/service_role/i);
 });
 
 test('HR navigation is shared, sticky, role-filtered and survives internal page changes',()=>{
