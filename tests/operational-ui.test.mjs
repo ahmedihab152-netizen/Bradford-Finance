@@ -115,7 +115,7 @@ test('Dr Amany navigation exposes both dashboard and financial approvals',()=>{
 });
 
 test('attendance spreadsheet import works without a live biometric device and stays financially inert',()=>{
- assert.match(html,/hr-phase6\.js\?v=20261021-4/);
+ assert.match(html,/hr-phase6\.js\?v=20261021-5/);
  for(const token of ['تم التعرف على الشيت تلقائيًا','hr_preview_attendance_file','hr_finalize_attendance_file','employee_code','punch_time']) assert.match(hrPhase6,new RegExp(token));
  assert.match(hrPhase6,/\.csv,\.xlsx,\.xls,\.pdf/);
  assert.match(hrPhase6,/PDF.*لا يصلح لحساب الحضور/);
@@ -136,6 +136,15 @@ test('biometric spreadsheets auto-detect ZKTeco event and daily report columns w
  assert.match(hrPhase6,/await window\.submitAttendanceFilePreview\(\)/);
  assert.match(hrPhase6,/punch_type:'IN'/);
  assert.match(hrPhase6,/punch_type:'OUT'/);
+});
+
+test('HR payroll review and approval actions stay visible on narrow screens',()=>{
+ assert.match(hrPhase6,/const hrActions=canHr/);
+ assert.match(hrPhase6,/ابدئي مراجعة الحالات/);
+ assert.match(hrPhase6,/<thead><tr><th>إجراء<\/th><th>الموظف<\/th>/);
+ assert.equal((hrPhase6.match(/اعتماد ريهام وتحويل إلى د\. أماني/g)||[]).length,1);
+ assert.match(hrPhase6,/\+hrActions\+.*reviewEmployeeHost/);
+ assert.match(hrPhase6,/reviewItemHost"><\/div>'\+hrActions/);
 });
 
 test('HR navigation is shared, sticky, role-filtered and survives internal page changes',()=>{
