@@ -116,7 +116,7 @@ test('Dr Amany navigation exposes both dashboard and financial approvals',()=>{
 });
 
 test('attendance spreadsheet import works without a live biometric device and stays financially inert',()=>{
- assert.match(html,/hr-phase6\.js\?v=20261021-6/);
+ assert.match(html,/hr-phase6\.js\?v=20261021-7/);
  for(const token of ['تم التعرف على الشيت تلقائيًا','hr_preview_attendance_file','hr_finalize_attendance_file','employee_code','punch_time']) assert.match(hrPhase6,new RegExp(token));
  assert.match(hrPhase6,/\.csv,\.xlsx,\.xls,\.pdf/);
  assert.match(hrPhase6,/PDF.*لا يصلح لحساب الحضور/);
@@ -151,6 +151,7 @@ test('HR payroll review and approval actions stay visible on narrow screens',()=
 test('payroll adjustment and biometric review buttons are directly wired and audited',()=>{
  for(const token of ['data-payroll-adjustment','data-payroll-review','خصم / زيادة','نعم — تطبيق الخصم المقترح','لا تخصم — إذن معتمد','hr_set_payroll_adjustment','manual_deduction_piasters']) assert.match(hrPhase6,new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')));
  assert.doesNotMatch(hrPhase6,/onclick="(?:editPayrollIncrease|reviewPayrollItem)/);
+ assert.equal((hrPhase6.match(/e\.stopPropagation\(\);open/g)||[]).length,2);
  assert.match(payrollAdjustments,/function public\.hr_set_payroll_adjustment/);
  assert.match(payrollAdjustments,/SET_MANUAL_ADJUSTMENT/);
  assert.match(payrollAdjustments,/role_name not in \('OWNER','CEO','HR_MANAGER'\)/);
