@@ -18,6 +18,7 @@ const attendanceFile=readFileSync(new URL('../supabase/migrations/20261015090000
 const attendancePolicy=readFileSync(new URL('../supabase/migrations/20261015100000_attendance_deduction_policy.sql',import.meta.url),'utf8');
 const attendanceBasis=readFileSync(new URL('../supabase/migrations/20261015102000_attendance_gross_daily_basis.sql',import.meta.url),'utf8');
 const payrollAdjustments=readFileSync(new URL('../supabase/migrations/20261021111312_add_payroll_manual_adjustments.sql',import.meta.url),'utf8');
+const payrollReview=readFileSync(new URL('../supabase/migrations/20261022120000_complete_attendance_payroll_review.sql',import.meta.url),'utf8');
 
 test('operational shell is loaded and public sign-up is removed at runtime',()=>{
  assert.match(html,/operational-ui\.js\?v=20260916-1/);
@@ -28,11 +29,10 @@ test('operational shell is loaded and public sign-up is removed at runtime',()=>
  assert.match(ui,/quickCreate/);
 });
 
-test('attendance monetary preview uses effective Gross divided by 30 and still requires HR approval',()=>{
- assert.match(attendanceBasis,/salary_basis='GROSS'/);
- assert.match(attendanceBasis,/daily_divisor=30/);
- assert.match(attendanceBasis,/basic_salary_piasters\+c\.fixed_allowance_piasters/);
- assert.match(attendanceBasis,/status in \('ACTIVE','DRAFT'\)/);
+test('payroll review supersedes the old gross preview with base net divided by 30',()=>{
+ assert.match(attendanceBasis,/salary_basis='GROSS'/); // historical migration remains immutable
+ assert.match(payrollReview,/daily_salary_piasters=round\(e\.net_salary_piasters\/30\.0\)/);
+ assert.match(payrollReview,/Gross remains an independent source field/);
  assert.match(attendanceBasis,/'financial_effect',false/);
  assert.match(attendanceBasis,/'requires_hr_approval',true/);
  assert.doesNotMatch(attendanceBasis,/service_role/i);
@@ -116,7 +116,7 @@ test('Dr Amany navigation exposes both dashboard and financial approvals',()=>{
 });
 
 test('attendance spreadsheet import works without a live biometric device and stays financially inert',()=>{
- assert.match(html,/hr-phase6\.js\?v=20261021-7/);
+ assert.match(html,/hr-phase6\.js\?v=20261022-1/);
  for(const token of ['تم التعرف على الشيت تلقائيًا','hr_preview_attendance_file','hr_finalize_attendance_file','employee_code','punch_time']) assert.match(hrPhase6,new RegExp(token));
  assert.match(hrPhase6,/\.csv,\.xlsx,\.xls,\.pdf/);
  assert.match(hrPhase6,/PDF.*لا يصلح لحساب الحضور/);
@@ -141,23 +141,31 @@ test('biometric spreadsheets auto-detect ZKTeco event and daily report columns w
 
 test('HR payroll review and approval actions stay visible on narrow screens',()=>{
  assert.match(hrPhase6,/const hrActions=canHr/);
- assert.match(hrPhase6,/ابدئي مراجعة الحالات/);
- assert.match(hrPhase6,/<thead><tr><th>إجراء<\/th><th>الموظف<\/th>/);
- assert.equal((hrPhase6.match(/اعتماد ريهام وتحويل إلى د\. أماني/g)||[]).length,1);
- assert.match(hrPhase6,/\+hrActions\+.*reviewEmployeeHost/);
- assert.match(hrPhase6,/reviewItemHost"><\/div>'\+hrActions/);
+ assert.match(hrPhase6,/إرسال الكشف لد\. أماني/);
+ assert.match(hrPhase6,/صف واحد لكل موظف/);
+ assert.match(hrPhase6,/data-payroll-employee/);
+ assert.match(hrPhase6,/data-save-employee-review/);
+ assert.match(hrPhase6,/حالات غير محسومة/);
 });
 
 test('payroll adjustment and biometric review buttons are directly wired and audited',()=>{
- for(const token of ['data-payroll-adjustment','data-payroll-review','خصم / زيادة','نعم — تطبيق الخصم المقترح','لا تخصم — إذن معتمد','hr_set_payroll_adjustment','manual_deduction_piasters']) assert.match(hrPhase6,new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')));
+ for(const token of ['data-employee-adjust','data-detail-review','خصم / زيادة','تطبيق الخصم المقترح','إذن','hr_set_payroll_adjustment','manual_deduction_piasters']) assert.match(hrPhase6,new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')));
  assert.doesNotMatch(hrPhase6,/onclick="(?:editPayrollIncrease|reviewPayrollItem)/);
- assert.equal((hrPhase6.match(/e\.stopPropagation\(\);open/g)||[]).length,2);
  assert.match(payrollAdjustments,/function public\.hr_set_payroll_adjustment/);
  assert.match(payrollAdjustments,/SET_MANUAL_ADJUSTMENT/);
  assert.match(payrollAdjustments,/role_name not in \('OWNER','CEO','HR_MANAGER'\)/);
  assert.match(payrollAdjustments,/revoke all on function public\.hr_set_payroll_adjustment.*public,anon/);
  assert.match(payrollAdjustments,/approved_deduction_piasters=x\.approved_total \+ e\.manual_deduction_piasters/);
  assert.doesNotMatch(payrollAdjustments,/service_role/i);
+});
+
+test('payroll review uses net over 30, exposes data issues, and blocks unresolved sending',()=>{
+ assert.match(payrollReview,/daily_salary_piasters=round\(e\.net_salary_piasters\/30\.0\)/);
+ assert.match(payrollReview,/EG001_NAME_CONFLICT_AMANY_UYAR/);
+ assert.match(payrollReview,/MISSING_GROSS_SOURCE/);
+ assert.match(payrollReview,/Cannot send: % unresolved cases/);
+ assert.match(payrollReview,/delete from public\.hr_holidays where source_type='NO_PUNCH_DAY'/);
+ assert.match(payrollReview,/loan_installment_piasters/);
 });
 
 test('HR navigation is shared, sticky, role-filtered and survives internal page changes',()=>{
