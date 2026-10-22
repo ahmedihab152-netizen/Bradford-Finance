@@ -165,6 +165,7 @@ test('Dr Amany navigation exposes both dashboard and financial approvals',()=>{
   assert.match(html,/access\.DR_AMANY_APPROVER=\[[^\]]*'students'[^\]]*'expenses'[^\]]*'treasury'[^\]]*'banks'[^\]]*'partners'[^\]]*'reports'/);
   assert.match(html,/['"]DR_AMANY_APPROVER['"]\]\.includes\(profile\.role\)/);
   assert.match(ui,/\['partners','الشركاء والنِّسب'\]/);
+  assert.match(html,/profile\.role===['"]DR_AMANY_APPROVER['"]\)return ['"]عرض فقط['"]/);
 });
 
 test('attendance spreadsheet import works without a live biometric device and stays financially inert',()=>{
