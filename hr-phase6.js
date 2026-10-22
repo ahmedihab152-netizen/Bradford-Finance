@@ -134,3 +134,58 @@ window.editPayrollIncrease=window.editPayrollAdjustment;
 window.reviewPayrollItem=id=>{const x=(window._reviewItems||[]).find(r=>r.id===id);if(!x)return;const selected=x.decision==='NEEDS_REVIEW'?'APPLY':x.decision,option=(v,l)=>'<option value="'+v+'" '+(selected===v?'selected':'')+'>'+l+'</option>';openM('قرار اليوم — '+x.employee_name,'<form id="reviewItemForm"><div class="note"><b>'+esc(x.event_date)+'</b> — المقترح '+egp(x.suggested_deduction_piasters)+' من صافي اليوم ÷ 30</div><div class="f"><label>القرار الإداري</label><select id="reviewItemDecision">'+option('APPLY','تطبيق الخصم المقترح')+option('INFORMED_ABSENCE','غياب مُبلّغ — يوم')+option('UNEXCUSED_ABSENCE','غياب بدون عذر — يومان')+option('EXEMPT','إعفاء — بدون خصم')+option('PERMISSION','إذن')+option('ON_DUTY','مأمورية — بدون خصم')+option('SICK_LEAVE','إجازة مرضية')+option('PAID_LEAVE','إجازة مدفوعة')+option('UNPAID_LEAVE','إجازة بدون راتب — يوم')+option('CORRECTED','تصحيح حالة خاطئة')+'</select></div><div class="f"><label>الأثر المالي للمرضي (إن اختير)</label><select id="reviewFinancial"><option value="NO_DEDUCTION">بدون خصم</option><option value="PROPOSED">الخصم المقترح</option><option value="FULL_DAY">خصم يوم</option></select></div><div class="f"><label>السبب (إلزامي)</label><textarea id="reviewItemNote" required>'+esc(x.reviewer_note||'')+'</textarea></div><div class="f"><label>رابط المرفق عند الحاجة</label><input id="reviewAttachment" value="'+esc(x.attachment_url||'')+'"></div><button class="btn primary w">حفظ القرار</button></form>');setTimeout(()=>document.querySelector('#reviewItemForm').onsubmit=async ev=>{ev.preventDefault();const note=document.querySelector('#reviewItemNote').value.trim();if(note.length<3)return uiToast('اكتب سبب القرار','warning');const r=await supabase.rpc('hr_review_payroll_item',{p_item:id,p_decision:document.querySelector('#reviewItemDecision').value,p_note:note,p_attachment_url:document.querySelector('#reviewAttachment').value||null,p_financial_treatment:document.querySelector('#reviewFinancial').value});if(r.error)return uiToast(r.error.message,'error',8000);closeM();await renderPayrollReviewWorkflow('#payrollReviewWorkflow');uiToast('تم حفظ القرار وتحديث المستحق تلقائيًا','success')},0)};
 window.sendPayrollReviewToAmany=async()=>{const unresolved=Number(window._reviewBatch.unresolved_count||0),blocked=(window._reviewEmployees||[]).filter(x=>x.review_status!=='REVIEWED'||x.identity_status!=='CONFIRMED').length;if(unresolved||blocked)return uiToast('لا يمكن الإرسال: '+unresolved+' حالة غير محسومة و'+blocked+' موظف غير جاهز/به تعارض هوية','error',10000);const ok=await appConfirm('إرسال الكشف لد. أماني','عدد الموظفين '+window._reviewEmployees.length+'، صافي المستحق '+egp(window._reviewBatch.final_net_payable_total_piasters)+'. الإرسال لا يعني الصرف.');if(!ok)return;const note=await appPrompt('ملاحظة ريهام','ملاحظة اختيارية قبل التحويل',0);const r=await supabase.rpc('hr_accept_remaining_and_send_to_amany',{p_batch:window._reviewBatch.id,p_note:note||null});if(r.error)return uiToast(r.error.message,'error',9000);await renderPayrollReviewWorkflow('#payrollReviewWorkflow');uiToast('تم إرسال الكشف إلى د. أماني','success')};
 window.amanyPayrollReview=async action=>{const note=await appPrompt(action==='APPROVE'?'اعتماد د. أماني':'إعادة إلى ريهام',action==='RETURN'?'سبب الإعادة إلزامي':'ملاحظة الاعتماد',action==='RETURN'?3:0);if(action==='RETURN'&&!note)return;const r=await supabase.rpc('hr_amany_payroll_review',{p_batch:window._reviewBatch.id,p_action:action,p_note:note||null});if(r.error)return uiToast(r.error.message,'error',9000);await renderPayrollReviewWorkflow('#payrollReviewWorkflow');uiToast(action==='APPROVE'?'تم الاعتماد النهائي':'تمت الإعادة إلى ريهام','success')};
+
+// This later definition is the active employee workflow. Decisions are made inline
+// and persisted together, while the original attendance record remains unchanged.
+window.openPayrollEmployee=code=>{
+ const employee=(window._reviewEmployees||[]).find(x=>x.employee_code===code);
+ const items=(window._reviewItems||[]).filter(x=>x.employee_code===code);
+ if(!employee)return;
+ const eventLabel={'Absence':'غياب','Late arrival':'تأخير','Early leave':'انصراف مبكر','No sign-in/out':'بصمة ناقصة'};
+ const drafts=new Map(items.map(item=>[item.id,{
+  action:item.decision==='NEEDS_REVIEW'?'':(item.decision==='APPLY'?'APPLY':'CANCEL'),
+  reason:item.decision==='NEEDS_REVIEW'||item.decision==='APPLY'?'':String(item.reviewer_note||'')
+ }]));
+ const shell='<div class="note"><b>'+esc(employee.employee_code||'بدون كود')+'</b> — الصافي الأساسي '+egp(employee.net_salary_piasters)+' — اسم الموظف يظهر هنا مرة واحدة فقط.</div>'+
+  (employee.data_issues?.length?'<div class="msg err">مشكلات البيانات: '+esc(employee.data_issues.join('، '))+'</div>':'')+
+  '<div class="tools" style="margin:10px 0"><button class="btn ghost" data-inline-filter="ALL">كل الحالات</button><button class="btn ghost" data-inline-filter="UNREVIEWED">لم يُراجع</button><button class="btn ghost" data-inline-filter="CANCELLED">أُلغي الخصم</button></div>'+
+  '<div id="inlineAttendanceReview"></div>'+
+  (window._reviewCanHr?'<button class="btn primary w" type="button" data-save-inline-review style="margin-top:12px">حفظ مراجعة الموظف</button>':'');
+ openM('ملف الموظف — '+employee.employee_name,shell);
+ const root=document.querySelector('#inlineAttendanceReview')?.parentElement;
+ let filter='ALL';
+ const selectedDeduction=()=>items.reduce((sum,item)=>sum+(drafts.get(item.id)?.action==='APPLY'?Number(item.suggested_deduction_piasters||0):0),0);
+ const finalPayable=()=>Number(employee.net_salary_piasters||0)+Number(employee.increase_piasters||0)-Number(employee.manual_deduction_piasters||0)-Number(employee.loan_installment_piasters||0)-selectedDeduction();
+ const statusHtml=item=>{
+  const draft=drafts.get(item.id)||{};
+  if(draft.action==='APPLY')return '<span class="good"><b>تم احتساب الخصم</b></span>';
+  if(draft.action==='CANCEL')return '<span class="warn"><b>أُلغي الخصم</b></span>'+(draft.reason?'<div class="muted">'+esc(draft.reason)+'</div>':'');
+  return '<span class="muted"><b>لم يُراجع</b></span>';
+ };
+ const draw=()=>{
+  const shown=items.filter(item=>filter==='ALL'||filter==='UNREVIEWED'&&!drafts.get(item.id)?.action||filter==='CANCELLED'&&drafts.get(item.id)?.action==='CANCEL');
+  document.querySelector('#inlineAttendanceReview').innerHTML='<div class="tablewrap" style="max-height:58vh"><table class="tbl"><thead><tr><th>التاريخ</th><th>الحالة</th><th>الدخول</th><th>الخروج</th><th>الخصم المقترح</th><th>القرار</th><th>سبب إلغاء الخصم</th><th>الحالة الحالية</th></tr></thead><tbody>'+
+   shown.map(item=>{const draft=drafts.get(item.id)||{},applySelected=draft.action==='APPLY',cancelSelected=draft.action==='CANCEL';return '<tr data-inline-review-row="'+item.id+'"><td>'+esc(item.event_date)+'</td><td>'+esc(eventLabel[item.event_type]||item.event_type)+'</td><td>'+esc(item.clock_in||'—')+'</td><td>'+esc(item.clock_out||'—')+'</td><td><b>'+egp(item.suggested_deduction_piasters)+'</b></td><td><div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" class="btn '+(applySelected?'primary':'ghost')+'" data-inline-review-action="APPLY">✓ احتساب الخصم</button><button type="button" class="btn '+(cancelSelected?'danger':'ghost')+'" data-inline-review-action="CANCEL">✕ إلغاء الخصم</button></div></td><td>'+(cancelSelected?'<input data-cancel-reason placeholder="مرضي / إذن / مأمورية / سبب آخر" value="'+esc(draft.reason)+'" required>':'—')+'</td><td data-inline-review-status>'+statusHtml(item)+'</td></tr>'}).join('')+
+   '</tbody></table></div><div class="note" style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px"><div>إجمالي الخصومات المختارة: <b>'+egp(selectedDeduction())+'</b></div><div>صافي المستحق: <b>'+egp(finalPayable())+'</b></div></div>';
+  document.querySelectorAll('[data-inline-review-row]').forEach(row=>{
+   const id=row.dataset.inlineReviewRow;
+   row.querySelectorAll('[data-inline-review-action]').forEach(button=>button.onclick=()=>{const draft=drafts.get(id);draft.action=button.dataset.inlineReviewAction;if(draft.action==='APPLY')draft.reason='';draw()});
+   const reason=row.querySelector('[data-cancel-reason]');
+   if(reason)reason.oninput=()=>{drafts.get(id).reason=reason.value;row.querySelector('[data-inline-review-status]').innerHTML=statusHtml(items.find(x=>x.id===id))};
+  });
+ };
+ draw();
+ root?.querySelectorAll('[data-inline-filter]').forEach(button=>button.onclick=()=>{filter=button.dataset.inlineFilter;draw()});
+ root?.querySelector('[data-save-inline-review]')?.addEventListener('click',async()=>{
+  const unresolved=items.filter(item=>!drafts.get(item.id)?.action);
+  if(unresolved.length)return uiToast('راجع كل الصفوف أولًا — متبقي '+unresolved.length+' صف','warning',7000);
+  const missingReasons=items.filter(item=>drafts.get(item.id)?.action==='CANCEL'&&drafts.get(item.id).reason.trim().length<3);
+  if(missingReasons.length)return uiToast('سبب إلغاء الخصم إلزامي في كل صف تم إلغاؤه','warning',7000);
+  const decisions=items.map(item=>({item_id:item.id,action:drafts.get(item.id).action,reason:drafts.get(item.id).reason.trim()}));
+  const saveButton=root.querySelector('[data-save-inline-review]');
+  saveButton.disabled=true;saveButton.textContent='جارٍ حفظ المراجعة…';
+  const result=await supabase.rpc('hr_save_employee_attendance_review',{p_batch:window._reviewBatch.id,p_employee_code:code,p_decisions:decisions});
+  if(result.error){saveButton.disabled=false;saveButton.textContent='حفظ مراجعة الموظف';return uiToast(result.error.message,'error',9000)}
+  closeM();await renderPayrollReviewWorkflow('#payrollReviewWorkflow');uiToast('تم حفظ مراجعة '+employee.employee_name+' مرة واحدة — لم يتم اعتماد أو صرف الكشف','success',7000);
+ });
+};

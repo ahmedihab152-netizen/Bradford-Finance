@@ -19,14 +19,36 @@ const attendancePolicy=readFileSync(new URL('../supabase/migrations/202610151000
 const attendanceBasis=readFileSync(new URL('../supabase/migrations/20261015102000_attendance_gross_daily_basis.sql',import.meta.url),'utf8');
 const payrollAdjustments=readFileSync(new URL('../supabase/migrations/20261021111312_add_payroll_manual_adjustments.sql',import.meta.url),'utf8');
 const payrollReview=readFileSync(new URL('../supabase/migrations/20261022120000_complete_attendance_payroll_review.sql',import.meta.url),'utf8');
+const bulkReview=readFileSync(new URL('../supabase/migrations/20261022133000_bulk_employee_attendance_review.sql',import.meta.url),'utf8');
 
 test('operational shell is loaded and public sign-up is removed at runtime',()=>{
  assert.match(html,/operational-ui\.js\?v=20260916-1/);
+ assert.match(html,/hr-phase6\.js\?v=20261022-2/);
  assert.match(ui,/signupTab\.remove\(\)/);
  assert.match(ui,/nav-group-title/);
  assert.match(ui,/screenSearch/);
  assert.match(ui,/breadcrumb/);
  assert.match(ui,/quickCreate/);
+});
+
+test('employee attendance review is inline and saved once as a bulk decision set',()=>{
+ assert.match(hrPhase6,/data-inline-review-action="APPLY"/);
+ assert.match(hrPhase6,/data-inline-review-action="CANCEL"/);
+ assert.match(hrPhase6,/data-cancel-reason/);
+ assert.match(hrPhase6,/إجمالي الخصومات المختارة/);
+ assert.match(hrPhase6,/صافي المستحق/);
+ assert.match(hrPhase6,/لم يُراجع/);
+ assert.match(hrPhase6,/تم احتساب الخصم/);
+ assert.match(hrPhase6,/أُلغي الخصم/);
+ assert.match(hrPhase6,/hr_save_employee_attendance_review/);
+});
+
+test('bulk attendance review RPC validates every row and writes one audit event',()=>{
+ assert.match(bulkReview,/Every attendance row must be reviewed exactly once/);
+ assert.match(bulkReview,/Invalid decision or missing cancellation reason/);
+ assert.match(bulkReview,/BULK_ATTENDANCE_REVIEW/);
+ assert.match(bulkReview,/status='PENDING_HR'/);
+ assert.match(bulkReview,/revoke all on function public\.hr_save_employee_attendance_review/);
 });
 
 test('payroll review supersedes the old gross preview with base net divided by 30',()=>{
@@ -116,7 +138,7 @@ test('Dr Amany navigation exposes both dashboard and financial approvals',()=>{
 });
 
 test('attendance spreadsheet import works without a live biometric device and stays financially inert',()=>{
- assert.match(html,/hr-phase6\.js\?v=20261022-1/);
+ assert.match(html,/hr-phase6\.js\?v=20261022-2/);
  for(const token of ['تم التعرف على الشيت تلقائيًا','hr_preview_attendance_file','hr_finalize_attendance_file','employee_code','punch_time']) assert.match(hrPhase6,new RegExp(token));
  assert.match(hrPhase6,/\.csv,\.xlsx,\.xls,\.pdf/);
  assert.match(hrPhase6,/PDF.*لا يصلح لحساب الحضور/);
