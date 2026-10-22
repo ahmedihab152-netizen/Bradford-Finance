@@ -23,10 +23,10 @@
   $('#content').innerHTML='<div class="card">جاري تحميل شاشة الكاشير…</div>';
   let accounts,batches;
   try{[accounts,batches]=await Promise.all([
-   allRows('student_accounts','id,student_id,academic_year,total_due_piasters,legacy_paid_piasters,division_code,cost_center_id,students(id,student_code,student_name,grade,section,guardian_name,guardian_phone,status)',q=>q.order('academic_year',{ascending:false})),
+   allRows('student_accounts','id,student_id,academic_year,total_due_piasters,legacy_paid_piasters,division_code,cost_center_id,source_meta,students(id,student_code,student_name,grade,section,guardian_name,guardian_phone,status)',q=>q.order('academic_year',{ascending:false})),
    allRows('student_payment_batches','id,account_id,student_id,receipt_number,verification_code,transaction_date,status,total_piasters,created_at,created_by,submitted_at,approved_at,approved_by,rejection_reason',q=>q.order('created_at',{ascending:false}).limit(150))
   ])}catch(e){$('#content').innerHTML='<div class="msg err">تعذر تحميل شاشة الكاشير: '+esc(e.message||e)+'</div>';return}
-  state.accounts=accounts.filter(a=>a.students&&a.students.status==='ACTIVE');state.batches=batches;
+  state.accounts=accounts.filter(a=>a.students&&a.students.status==='ACTIVE'&&!a.source_meta?.superseded);state.batches=batches;
   $('#content').innerHTML='<div class="cashier-head"><div><h2>الكاشير — تحصيل شامل للطالب</h2><div class="small">إيصال واحد لعدة بنود • لا أثر مالي قبل اعتماد د. أماني</div></div><button class="btn ghost" onclick="cashierPrintPending()">طباعة العمليات الظاهرة</button></div><div class="card"><label class="lab">بحث فوري بالاسم أو الكود أو Grade أو Section أو هاتف ولي الأمر</label><input id="cashierStudentSearch" class="cashier-search" autocomplete="off" placeholder="اكتب حرفين على الأقل…"><div id="cashierStudentHits" class="cashier-hits"><div class="empty">لن تظهر قائمة عشوائية؛ ابدأ الكتابة للبحث.</div></div></div><div id="cashierWorkspace"></div>'+batchQueueMarkup(batches);
   $('#cashierStudentSearch').addEventListener('input',filterStudents);
  }

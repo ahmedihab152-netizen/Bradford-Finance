@@ -20,6 +20,20 @@ const attendanceBasis=readFileSync(new URL('../supabase/migrations/2026101510200
 const payrollAdjustments=readFileSync(new URL('../supabase/migrations/20261021111312_add_payroll_manual_adjustments.sql',import.meta.url),'utf8');
 const payrollReview=readFileSync(new URL('../supabase/migrations/20261022120000_complete_attendance_payroll_review.sql',import.meta.url),'utf8');
 const bulkReview=readFileSync(new URL('../supabase/migrations/20261022133000_bulk_employee_attendance_review.sql',import.meta.url),'utf8');
+const cashier=readFileSync(new URL('../cashier.js',import.meta.url),'utf8');
+const sourceImports=readFileSync(new URL('../supabase/migrations/20261022173000_source_controlled_finance_imports.sql',import.meta.url),'utf8');
+
+test('approved finance workbooks are traceable and superseded student accounts stay hidden',()=>{
+ assert.match(html,/const STUDENT_YEAR='2025-2026'/);
+ assert.match(html,/cashier\.js\?v=20260914-3/);
+ assert.match(html,/student_accounts\(source_meta,students/);
+ assert.match(html,/source_meta\?\.superseded/);
+ assert.match(cashier,/source_meta/);
+ assert.match(cashier,/!a\.source_meta\?\.superseded/);
+ for(const table of ['erp_source_files','erp_source_rows']) assert.match(sourceImports,new RegExp(`create table if not exists public\\.${table}`));
+ assert.match(sourceImports,/enable row level security/);
+ assert.match(sourceImports,/duplicate_of/);
+});
 
 test('operational shell is loaded and public sign-up is removed at runtime',()=>{
  assert.match(html,/operational-ui\.js\?v=20260916-1/);
