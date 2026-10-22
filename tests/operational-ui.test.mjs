@@ -54,6 +54,8 @@ test('operational shell is loaded and public sign-up is removed at runtime',()=>
  assert.match(ui,/screenSearch/);
  assert.match(ui,/breadcrumb/);
  assert.match(ui,/quickCreate/);
+ assert.match(html,/profile\?\.role!==['"]OWNER['"]/);
+ assert.match(html,/bfEnterpriseLink/);
 });
 
 test('employee attendance review is inline and saved once as a bulk decision set',()=>{

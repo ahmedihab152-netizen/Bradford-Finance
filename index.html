@@ -49,13 +49,17 @@ window.addEventListener('load',()=>setTimeout(boot,250));
 
   function addReleaseNav(){
     const actions=document.querySelector('.top .actions');
-    if(actions&&!document.getElementById('bfEnterpriseLink')){
+    if(!actions)return;
+    let link=document.getElementById('bfEnterpriseLink');
+    if(profile?.role!=='OWNER'){
+      link?.remove();
+    }else if(!link){
       const a=document.createElement('button');
       a.id='bfEnterpriseLink';a.className='btn ghost';a.textContent='فحص النظام';
       a.type='button';a.onclick=()=>{page='system_check';buildNav();render()};
       actions.insertBefore(a,actions.firstChild);
-      const b=document.createElement('span');b.className='badge';b.textContent=release;actions.insertBefore(b,a);
     }
+    if(!document.getElementById('bfReleaseBadge')){const b=document.createElement('span');b.id='bfReleaseBadge';b.className='badge';b.textContent=release;actions.insertBefore(b,actions.firstChild)}
   }
   addReleaseNav();
 
