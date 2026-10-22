@@ -163,6 +163,8 @@ test('Dr Amany mobile approvals are grouped, filtered and transactionally review
 test('Dr Amany navigation exposes both dashboard and financial approvals',()=>{
   assert.match(amanyDashboard,/access\.DR_AMANY_APPROVER=.*'amany_dashboard','approvals'/);
   assert.match(html,/access\.DR_AMANY_APPROVER=\[[^\]]*'students'[^\]]*'expenses'[^\]]*'treasury'[^\]]*'banks'[^\]]*'partners'[^\]]*'reports'/);
+  assert.match(html,/['"]DR_AMANY_APPROVER['"]\]\.includes\(profile\.role\)/);
+  assert.match(ui,/\['partners','الشركاء والنِّسب'\]/);
 });
 
 test('attendance spreadsheet import works without a live biometric device and stays financially inert',()=>{
