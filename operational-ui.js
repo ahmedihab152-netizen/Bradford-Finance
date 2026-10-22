@@ -1,4 +1,5 @@
-(()=>{
+(async()=>{
+  await window.supabaseReady;
  Object.assign(access,{
   CASHIER:['dashboard','students','cashier','security','support'],
   TREASURY_MANAGER:['dashboard','approvals','treasury','cheques','banks','reports','security','support'],
@@ -139,13 +140,19 @@
  // Administrator-only account policy: the public sign-up form is not a production entry point.
  const signupTab=$('#st');if(signupTab)signupTab.remove();const signupForm=$('#sf');if(signupForm)signupForm.remove();
  addTopChrome();
-})();
+  await boot();
+})().catch(error=>{
+  console.error('Supabase initialization failed',error);
+  const box=document.querySelector('#amsg');
+  if(box)box.innerHTML='<div class="msg err">تعذر تحميل خدمة البيانات. حدّث الصفحة وحاول مرة أخرى.</div>';
+});
 
 // Role-specific approval dashboard is kept in a separate audited module.
 (()=>{const s=document.createElement('script');s.src='dr-amany-dashboard.js?v=20260920-1';s.onload=()=>{const a=document.createElement('script');a.src='amany-financial-approvals.js?v=20260920-1';document.head.appendChild(a)};document.head.appendChild(s)})();
 
 // Password recovery must end with an explicit password update; never collect or log the value elsewhere.
-(()=>{
+(async()=>{
+  await window.supabaseReady;
   function showRecoveryForm(){
     openM('تعيين كلمة مرور جديدة','<form id="passwordRecoveryForm"><div class="note">اكتب كلمة مرور جديدة للحساب. لن تُعرض أو تُرسل إلى إدارة النظام.</div><div class="f"><label>كلمة المرور الجديدة</label><input id="recoveryPassword" type="password" minlength="12" autocomplete="new-password" required></div><div class="f"><label>تأكيد كلمة المرور</label><input id="recoveryPasswordConfirm" type="password" minlength="12" autocomplete="new-password" required></div><button id="recoveryPasswordSubmit" class="btn primary w">حفظ كلمة المرور</button></form>');
   }
@@ -166,4 +173,4 @@
     closeM();uiToast('تم تحديث كلمة المرور. سجّل الدخول بكلمة المرور الجديدة.','success',8000);
     await supabase.auth.signOut();setTimeout(()=>location.replace(location.origin+location.pathname),800);
   });
-})();
+})().catch(error=>console.error('Password recovery initialization failed',error));

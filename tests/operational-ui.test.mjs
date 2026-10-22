@@ -23,20 +23,31 @@ const bulkReview=readFileSync(new URL('../supabase/migrations/20261022133000_bul
 const cashier=readFileSync(new URL('../cashier.js',import.meta.url),'utf8');
 const sourceImports=readFileSync(new URL('../supabase/migrations/20261022173000_source_controlled_finance_imports.sql',import.meta.url),'utf8');
 
-test('approved finance workbooks are traceable and superseded student accounts stay hidden',()=>{
- assert.match(html,/const STUDENT_YEAR='2025-2026'/);
- assert.match(html,/cashier\.js\?v=20260914-3/);
- assert.match(html,/student_accounts\(source_meta,students/);
+test('current student operations use 2026-2027 while historical and superseded accounts stay hidden',()=>{
+ assert.match(html,/const STUDENT_YEAR='2026-2027'/);
+ assert.match(html,/cashier\.js\?v=20260914-4/);
+ assert.match(html,/student_accounts\(academic_year,source_meta,students/);
  assert.match(html,/source_meta\?\.superseded/);
+ assert.match(html,/academic_year===STUDENT_YEAR/);
  assert.match(cashier,/source_meta/);
  assert.match(cashier,/!a\.source_meta\?\.superseded/);
+ assert.match(cashier,/a\.academic_year==='2026-2027'/);
  for(const table of ['erp_source_files','erp_source_rows']) assert.match(sourceImports,new RegExp(`create table if not exists public\\.${table}`));
  assert.match(sourceImports,/enable row level security/);
  assert.match(sourceImports,/duplicate_of/);
 });
 
+test('expenses remain one continuous ledger across academic years',()=>{
+ const expenseLoader=html.match(/async function expenses\(\)\{[\s\S]*?\$\('#content'\)\.innerHTML=h\}/)?.[0]||'';
+ assert.match(expenseLoader,/from\('expenses'\)/);
+ assert.doesNotMatch(expenseLoader,/academic_year|2025-2026|2026-2027/);
+});
+
 test('operational shell is loaded and public sign-up is removed at runtime',()=>{
- assert.match(html,/operational-ui\.js\?v=20260916-1/);
+ assert.match(html,/operational-ui\.js\?v=20261022-2/);
+ assert.match(html,/window\.supabaseReady=new Promise/);
+ assert.match(html,/@supabase\/supabase-js@2\.116\.0/);
+ assert.match(ui,/await window\.supabaseReady/);
  assert.match(html,/hr-phase6\.js\?v=20261022-2/);
  assert.match(ui,/signupTab\.remove\(\)/);
  assert.match(ui,/nav-group-title/);
