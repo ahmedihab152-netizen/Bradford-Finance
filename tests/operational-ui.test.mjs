@@ -25,7 +25,7 @@ const sourceImports=readFileSync(new URL('../supabase/migrations/20261022173000_
 
 test('current student operations use 2026-2027 while historical and superseded accounts stay hidden',()=>{
  assert.match(html,/const STUDENT_YEAR='2026-2027'/);
- assert.match(html,/cashier\.js\?v=20260914-4/);
+ assert.match(html,/cashier\.js\?v=20261026-1/);
  assert.match(html,/student_accounts\(academic_year,source_meta,students/);
  assert.match(html,/source_meta\?\.superseded/);
  assert.match(html,/academic_year===STUDENT_YEAR/);
@@ -44,7 +44,7 @@ test('expenses remain one continuous ledger across academic years',()=>{
 });
 
 test('operational shell is loaded and public sign-up is removed at runtime',()=>{
- assert.match(html,/operational-ui\.js\?v=20261022-3/);
+ assert.match(html,/operational-ui\.js\?v=20261026-1/);
  assert.match(html,/window\.supabaseReady=new Promise/);
  assert.match(html,/@supabase\/supabase-js@2\.116\.0/);
  assert.match(ui,/await window\.supabaseReady/);

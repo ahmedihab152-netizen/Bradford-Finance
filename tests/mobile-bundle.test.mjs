@@ -19,6 +19,8 @@ test('mobile bundle is self-contained and exposes required support links', async
   assert.match(html, /mobile-bridge\.js/);
   assert.match(html, /Bradford ERP/);
   assert.match(html, /app\.bradforderp\.com/);
+  const scripts=[...html.matchAll(/<script[^>]*\bsrc="([^"?]+)(?:\?[^" ]*)?"/g)].map(x=>x[1]);
+  await Promise.all(scripts.filter(x=>!/^https?:/.test(x)).map(file=>access(new URL(`../www/${file}`,import.meta.url))));
   await Promise.all([
     'www/privacy.html',
     'www/support.html',

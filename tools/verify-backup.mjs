@@ -26,7 +26,7 @@ export function verifyBackupPackage(pack) {
   if (Number(manifest.byte_size) !== byteSize) errors.push('Manifest byte_size does not match the UTF-8 payload size.');
   if (Number(manifest.table_count) !== tableNames.length) errors.push('Manifest table_count does not match the payload.');
   if (Number(manifest.row_count) !== rowCount) errors.push('Manifest row_count does not match the payload.');
-  if (payload.environment && payload.environment !== 'PRODUCTION') errors.push('Backup payload is not labelled PRODUCTION.');
+  if (payload.environment !== 'PRODUCTION') errors.push('Backup payload is not labelled PRODUCTION.');
 
   return {
     ok: errors.length === 0,

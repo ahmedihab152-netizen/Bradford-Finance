@@ -13,6 +13,9 @@ await mkdir(resolve(output, 'assets'), { recursive: true });
 
 const appScripts = [
   'admissions.js',
+  'operational-ui.js',
+  'dr-amany-dashboard.js',
+  'amany-financial-approvals.js',
   'assets-cheques.js',
   'cashier.js',
   'hr-operations.js',
@@ -27,7 +30,7 @@ const appScripts = [
 ];
 
 let html = await readFile(resolve(root, 'index.html'), 'utf8');
-const remoteSupabaseImport = "import {createClient} from 'https://esm.sh/@supabase/supabase-js@2';";
+const remoteSupabaseImport = "import {createClient} from 'https://esm.sh/@supabase/supabase-js@2.116.0';";
 if (!html.includes(remoteSupabaseImport)) {
   throw new Error('Expected Supabase bootstrap was not found; refusing to create a partial mobile bundle.');
 }
@@ -35,7 +38,7 @@ if (!html.includes(remoteSupabaseImport)) {
 html = html
   .replace(remoteSupabaseImport, "import {createClient} from './supabase-client.js';")
   .replace('<title>Bradford Finance ERP</title>', '<title>Bradford ERP</title>')
-  .replace('resetPasswordForEmail(email,{redirectTo:location.href})', "resetPasswordForEmail(email,{redirectTo:location.protocol==='capacitor:'?'https://app.bradforderp.com/':location.href})")
+  .replace('resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname})', "resetPasswordForEmail(email,{redirectTo:location.protocol==='capacitor:'?'https://app.bradforderp.com/':location.origin+location.pathname})")
   .replace('BRADFORD <span>FINANCE ERP</span>', 'BRADFORD <span>ERP</span>')
   .replace('Finance, Audit & Control', 'HR, Finance, Audit & Control')
   .replace('<h2 style="margin:0">Bradford Finance</h2>', '<h2 style="margin:0">Bradford ERP</h2>')

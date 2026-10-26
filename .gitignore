@@ -6,3 +6,5 @@ android/app/build/
 ios/App/DerivedData/
 *.log
 .DS_Store
+
+supabase/.temp/

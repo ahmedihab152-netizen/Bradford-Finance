@@ -36,7 +36,7 @@
   const quick=$('#quickCreate');if(quick){quick.classList.toggle('hidden',!canWrite());quick.onclick=()=>quickCreate()}
  };
  const oldRender=render;
- render=async function(){const out=await oldRender();addTopChrome();installPageActions();return out};
+ render=async function(){if($('#title'))$('#title').textContent=pages[page]||'Bradford ERP';addTopChrome();const out=await oldRender();addTopChrome();installPageActions();return out};
 
  const topTools=()=>$('#content .sec .tools')||$('#content .sec')||$('#content');
  function addAction(id,label,fn){if(!canWrite()||$('#'+id))return;const b=document.createElement('button');b.id=id;b.className='btn primary';b.textContent='+ '+label;b.onclick=fn;topTools()?.prepend(b)}

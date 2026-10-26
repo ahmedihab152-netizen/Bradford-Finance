@@ -61,3 +61,5 @@ test('rejects malformed table values and non-production labels', () => {
   assert.match(result.errors.join('\n'), /Tables must contain arrays/);
   assert.match(result.errors.join('\n'), /not labelled PRODUCTION/);
 });
+
+ test('rejects an unlabeled package even if its hash is valid',()=>{assert.equal(verifyBackupPackage(packageFor({tables:{students:[]}})).ok,false)});
