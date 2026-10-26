@@ -33,5 +33,6 @@ from (values
  ('balance_equity',coalesce((select sum(balance_piasters) from public.v_balance_sheet_live where account_type='EQUITY'),0)),
  ('cost_center_profit',coalesce((select sum(net_profit_piasters) from public.v_cost_center_profit_loss),0))) after(measure,value)
 join audit_reversal_before before using(measure);
+insert into audit_reversal_result select 'report_invoker_rls_'||c.relname,coalesce(c.reloptions,'{}') @> array['security_invoker=true'],'caller RLS remains enabled after replacement' from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relname in('v_journal_trial_balance','v_profit_and_loss_live','v_cash_movement_live','v_balance_sheet_live','v_cost_center_profit_loss','v_production_health');
 select jsonb_agg(to_jsonb(r)) results from audit_reversal_result r;
 rollback;
