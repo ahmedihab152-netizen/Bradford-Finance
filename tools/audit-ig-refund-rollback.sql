@@ -1,0 +1,101 @@
+-- Staging only. Append the IG migration immediately after BEGIN; rollback all fixtures.
+begin;
+create temp table ig_result(test text,passed boolean,detail text);
+create temp table ig_context(account uuid,entry1 uuid,entry2 uuid,batch1 uuid,batch2 uuid,key1 text);
+grant select,insert,update on ig_context to authenticated;
+grant select,insert on ig_result to authenticated;
+select set_config('request.jwt.claims',jsonb_build_object('sub',user_id,'role','authenticated','aal','aal2')::text,true) from public.user_profiles where role='OWNER' and active limit 1;
+set local role authenticated;
+do $$declare s uuid;a uuid;e1 uuid;e2 uuid;begin
+ s:=public.create_student_with_account('AUDIT-IG-'||gen_random_uuid(),'Synthetic IG student','Grade 10','2026-2027');
+ select id into a from public.student_accounts where student_id=s;
+ update public.student_accounts set division_code='IG' where id=a;
+ e1:=public.create_ig_exam_entry(a,'AUDIT','MATH-'||substr(gen_random_uuid()::text,1,8),'Synthetic maths','OL','AUDIT-2026','FIRST_ENTRY',10000);
+ e2:=public.create_ig_exam_entry(a,'AUDIT','SCI-'||substr(gen_random_uuid()::text,1,8),'Synthetic science','OL','AUDIT-2026','FIRST_ENTRY',10000);
+ perform public.submit_ig_exam_entry(e1);perform public.submit_ig_exam_entry(e2);
+ insert into ig_context(account,entry1,entry2,key1) values(a,e1,e2,gen_random_uuid()::text);
+end $$;
+reset role;
+select set_config('request.jwt.claims',jsonb_build_object('sub',approver_user_id,'role','authenticated','aal','aal1')::text,true) from public.approval_authorities where scope='PAYMENTS_EXPENSES' and active;
+set local role authenticated;
+do $$begin
+ begin perform public.review_ig_exam_entry((select entry1 from ig_context),'APPROVE',null);insert into ig_result values('ig_fee_review_requires_mfa',false,'accepted AAL1');exception when others then insert into ig_result values('ig_fee_review_requires_mfa',sqlerrm like '%MFA%',sqlerrm);end;
+ perform set_config('request.jwt.claims',(current_setting('request.jwt.claims')::jsonb||'{"aal":"aal2"}')::text,true);
+ perform public.review_ig_exam_entry((select entry1 from ig_context),'APPROVE',null);perform public.review_ig_exam_entry((select entry2 from ig_context),'APPROVE',null);
+end $$;
+reset role;
+select set_config('request.jwt.claims',jsonb_build_object('sub',user_id,'role','authenticated','aal','aal2')::text,true) from public.user_profiles where role='OWNER' and active limit 1;
+set local role authenticated;
+do $$declare b1 uuid;b2 uuid;again uuid;k text:=(select key1 from ig_context);lines jsonb;tenders jsonb:='[{"method":"CASH","amount_piasters":6000}]';begin
+ lines:=jsonb_build_array(jsonb_build_object('ig_exam_entry_id',(select entry1 from ig_context),'description','Same synthetic description','paid_now_piasters',6000));
+ b1:=public.create_ig_exam_payment_batch((select account from ig_context),current_date,k,lines,tenders,'IG audit');
+ again:=public.create_ig_exam_payment_batch((select account from ig_context),current_date,k,lines,tenders,'IG audit');
+ insert into ig_result values('ig_same_request_replays_draft',b1=again,'one draft and same batch identifier');
+ begin perform public.create_ig_exam_payment_batch((select account from ig_context),current_date,k,jsonb_build_array(jsonb_build_object('ig_exam_entry_id',(select entry2 from ig_context),'description','Same synthetic description','paid_now_piasters',6000)),tenders,'IG audit');insert into ig_result values('ig_changed_subject_same_key_denied',false,'accepted');exception when others then insert into ig_result values('ig_changed_subject_same_key_denied',sqlerrm like '%different request%',sqlerrm);end;
+ b2:=public.create_ig_exam_payment_batch((select account from ig_context),current_date,gen_random_uuid()::text,lines,tenders,'Other pending IG receipt');
+ perform public.submit_student_payment_batch(b1);perform public.submit_student_payment_batch(b2);
+ update ig_context set batch1=b1,batch2=b2;
+end $$;
+reset role;
+select set_config('request.jwt.claims',jsonb_build_object('sub',approver_user_id,'role','authenticated','aal','aal2')::text,true) from public.approval_authorities where scope='PAYMENTS_EXPENSES' and active;
+set local role authenticated;
+select public.review_student_payment_batch((select batch1 from ig_context),'APPROVE',null);
+do $$begin
+ begin perform public.review_student_payment_batch((select batch2 from ig_context),'APPROVE',null);insert into ig_result values('ig_overpayment_rechecked_on_approval',false,'second receipt accepted');exception when others then insert into ig_result values('ig_overpayment_rechecked_on_approval',sqlerrm like '%outstanding fee at approval%',sqlerrm);end;
+end $$;
+reset role;
+select set_config('request.jwt.claims',jsonb_build_object('sub',user_id,'role','authenticated','aal','aal2')::text,true) from public.user_profiles where role='OWNER' and active limit 1;
+set local role authenticated;
+insert into ig_result select 'ig_partial_collection_balance',paid_piasters=6000 and remaining_piasters=4000,'fee 100.00, paid 60.00, remaining 40.00 EGP' from public.v_ig_exam_entry_balances where id=(select entry1 from ig_context);
+select public.reverse_student_payment_batch((select batch1 from ig_context),'Synthetic IG full refund',current_date,false);
+insert into ig_result select 'ig_refund_restores_obligation',paid_piasters=0 and remaining_piasters=10000 and status='POSTED','full refund restores 100.00 remaining; approved fee retained' from public.v_ig_exam_entry_balances where id=(select entry1 from ig_context);
+insert into ig_result select 'ig_refund_student_net_zero',sum(amount_piasters*effect_sign)=0,'original plus signed reversal sums to zero' from public.student_payments where payment_batch_id=(select batch1 from ig_context) and status in('POSTED','REVERSED');
+do $$declare again uuid;begin
+ again:=public.create_ig_exam_payment_batch((select account from ig_context),current_date,(select key1 from ig_context),jsonb_build_array(jsonb_build_object('ig_exam_entry_id',(select entry1 from ig_context),'description','Same synthetic description','paid_now_piasters',6000)),'[{"method":"CASH","amount_piasters":6000}]','IG audit');
+ insert into ig_result values('ig_retry_after_refund_same_receipt',again=(select batch1 from ig_context),'same key never creates another receipt');
+end $$;
+reset role;
+select set_config('request.jwt.claims',jsonb_build_object('sub',approver_user_id,'role','authenticated','aal','aal2')::text,true) from public.approval_authorities where scope='PAYMENTS_EXPENSES' and active;
+set local role authenticated;
+select public.review_student_payment_batch((select batch2 from ig_context),'APPROVE',null);
+reset role;
+select set_config('request.jwt.claims',jsonb_build_object('sub',user_id,'role','authenticated','aal','aal2')::text,true) from public.user_profiles where role='OWNER' and active limit 1;
+set local role authenticated;
+insert into ig_result select 'ig_pending_eligible_after_refund',paid_piasters=6000 and remaining_piasters=4000,'second receipt can post after obligation reopens' from public.v_ig_exam_entry_balances where id=(select entry1 from ig_context);
+reset role;
+create temp table ig_bank_test(actor uuid,bank uuid,foreign_bank uuid,batch uuid);
+grant select,update on ig_bank_test to authenticated;
+select set_config('request.jwt.claims','{}',true);
+do $$declare u uuid:=gen_random_uuid();o uuid:=gen_random_uuid();bank_id uuid;foreign_id uuid;begin
+ insert into auth.users(id,email,raw_user_meta_data) values(u,'audit-'||u||'@example.invalid','{}');
+ insert into public.erp_organizations(id,organization_code,organization_name) values(o,'AUDIT-'||o,'Disposable IG bank tenant');
+ insert into public.bank_accounts(bank_name,account_label,gl_account_code) values('AUDIT local bank','IG test','1200') returning id into bank_id;
+ insert into public.bank_accounts(bank_name,account_label,gl_account_code,organization_id) values('AUDIT foreign bank','Foreign IG test','1200',o) returning id into foreign_id;
+ insert into ig_bank_test(actor,bank,foreign_bank) values(u,bank_id,foreign_id);
+end $$;
+select set_config('request.jwt.claims',jsonb_build_object('sub',user_id,'role','authenticated','aal','aal2')::text,true) from public.user_profiles where role='OWNER' and active limit 1;
+update public.user_profiles set role='IG_ACCOUNTANT',active=true where user_id=(select actor from ig_bank_test);
+insert into public.erp_user_scopes(user_id,organization_id) select actor,public.default_organization_id() from ig_bank_test;
+select set_config('request.jwt.claims',jsonb_build_object('sub',actor,'role','authenticated','aal','aal1')::text,true) from ig_bank_test;
+set local role authenticated;
+insert into ig_result select 'ig_bank_options_respect_scope',count(*) filter(where id=(select bank from ig_bank_test))=1 and count(*) filter(where id=(select foreign_bank from ig_bank_test))=0,'IG role sees its active bank, not foreign bank' from public.ig_cashier_bank_options();
+do $$declare b uuid;begin
+ b:=public.create_ig_exam_payment_batch((select account from ig_context),current_date,gen_random_uuid()::text,jsonb_build_array(jsonb_build_object('ig_exam_entry_id',(select entry1 from ig_context),'description','Bank IG payment','paid_now_piasters',4000)),jsonb_build_array(jsonb_build_object('method','QNB','amount_piasters',4000,'bank_account_id',(select bank from ig_bank_test))),'IG bank audit');
+ perform public.submit_student_payment_batch(b);update ig_bank_test set batch=b;
+end $$;
+reset role;
+select set_config('request.jwt.claims',jsonb_build_object('sub',approver_user_id,'role','authenticated','aal','aal2')::text,true) from public.approval_authorities where scope='PAYMENTS_EXPENSES' and active;
+set local role authenticated;
+select public.review_student_payment_batch((select batch from ig_bank_test),'APPROVE',null);
+reset role;
+select set_config('request.jwt.claims',jsonb_build_object('sub',user_id,'role','authenticated','aal','aal2')::text,true) from public.user_profiles where role='OWNER' and active limit 1;
+set local role authenticated;
+insert into ig_result select 'ig_noncash_payment_posts',paid_piasters=10000 and remaining_piasters=0,'60.00 cash plus 40.00 bank covers 100.00 fee' from public.v_ig_exam_entry_balances where id=(select entry1 from ig_context);
+select public.reverse_student_payment_batch((select batch from ig_bank_test),'Synthetic IG bank refund',current_date,false);
+insert into ig_result select 'ig_bank_refund_reopens_remaining',paid_piasters=6000 and remaining_piasters=4000,'bank refund restores 40.00 remaining' from public.v_ig_exam_entry_balances where id=(select entry1 from ig_context);
+insert into ig_result select 'ig_bank_refund_movements_match',sum(credit_piasters-debit_piasters)=0 and count(*)=2,'40.00 bank credit and reversing debit' from public.bank_transactions where payment_batch_id=(select batch from ig_bank_test);
+reset role;
+insert into ig_result values('ig_bank_options_no_anonymous_execute',not has_function_privilege('anon','public.ig_cashier_bank_options()','EXECUTE'),'anonymous user cannot execute bank-options function');
+
+select jsonb_agg(to_jsonb(r)) results from ig_result r;
+rollback;

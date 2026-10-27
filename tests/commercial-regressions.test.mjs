@@ -119,3 +119,17 @@ test('failed attachment metadata save attempts to remove the newly uploaded orph
  await assert.rejects(ctx.saveAttachments({files:[{name:'test.pdf',size:42,type:'application/pdf'}]},'transport_vehicles','test-id'),e=>e.message==='metadata denied');
  assert.equal(removed.length,1);assert.ok(removed[0].startsWith('actor/transport_vehicles/test-id/'));
 });
+function igReceiptHarness(rpc,storage=new Map()){
+ const source=readFileSync(new URL('../ig-exams.js',import.meta.url),'utf8');const code=source.slice(source.indexOf(' let igSaving=false;'),source.indexOf(' const previous=igFinance;'));
+ const fields={'#igPayAccount':{value:'account'},'#igPayMethod':{value:'CASH'},'#igPayBank':{value:''},'#igPayDate':{value:'2026-10-27'},'#igPayReference':{value:''}};let submit;
+ const context={rows:[{id:'subject1',subject_code:'MATH',subject_name:'Maths',session_code:'2026'}],document:{addEventListener:(type,fn)=>{if(type==='submit')submit=fn},querySelectorAll:()=>[{value:'subject1'}],querySelector:()=>({value:'60'})},$:id=>fields[id],session:{user:{id:'actor'}},crypto:webcrypto,TextEncoder,Uint8Array,Array,JSON,sessionStorage:{getItem:k=>storage.get(k)??null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},supabase:{rpc},uiToast:()=>{},closeM:()=>{},igFinance:async()=>{}};
+ vm.runInNewContext(code,context);return {fields,submit:()=>submit({target:{id:'igExamPayForm',querySelector:()=>({disabled:false})},preventDefault(){}})};
+}
+test('IG receipt retry after a lost response reuses the same request key after reload',async()=>{
+ const keys=[],storage=new Map();const first=igReceiptHarness(async(_name,p)=>{keys.push(p.p_idempotency_key);throw Error('lost response')},storage);await first.submit();
+ const second=igReceiptHarness(async(_name,p)=>{keys.push(p.p_idempotency_key);return {data:'batch'}},storage);await second.submit();assert.equal(keys.length,2);assert.equal(keys[0],keys[1]);assert.equal(storage.size,0);
+});
+test('IG receipt prevents double save and demands a bank account for noncash',async()=>{
+ let calls=0,release,started;const ready=new Promise(r=>started=r);const h=igReceiptHarness(async(_name,p)=>{calls++;assert.equal(p.p_tenders[0].bank_account_id,'bank1');started();return new Promise(r=>release=r)});
+ h.fields['#igPayMethod'].value='QNB';await h.submit();assert.equal(calls,0);h.fields['#igPayBank'].value='bank1';const first=h.submit();await ready;await h.submit();assert.equal(calls,1);release({data:'batch'});await first;
+});
