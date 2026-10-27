@@ -48,7 +48,7 @@ test('operational shell is loaded and public sign-up is removed at runtime',()=>
  assert.match(html,/window\.supabaseReady=new Promise/);
  assert.match(html,/@supabase\/supabase-js@2\.116\.0/);
  assert.match(ui,/await window\.supabaseReady/);
- assert.match(html,/hr-phase6\.js\?v=20261022-2/);
+ assert.match(html,/hr-phase6\.js\?v=20261027-3/);
  assert.match(ui,/signupTab\.remove\(\)/);
  assert.match(ui,/nav-group-title/);
  assert.match(ui,/screenSearch/);
@@ -169,7 +169,7 @@ test('Dr Amany navigation exposes both dashboard and financial approvals',()=>{
 });
 
 test('attendance spreadsheet import works without a live biometric device and stays financially inert',()=>{
- assert.match(html,/hr-phase6\.js\?v=20261022-2/);
+ assert.match(html,/hr-phase6\.js\?v=20261027-3/);
  for(const token of ['تم التعرف على الشيت تلقائيًا','hr_preview_attendance_file','hr_finalize_attendance_file','employee_code','punch_time']) assert.match(hrPhase6,new RegExp(token));
  assert.match(hrPhase6,/\.csv,\.xlsx,\.xls,\.pdf/);
  assert.match(hrPhase6,/PDF.*لا يصلح لحساب الحضور/);
