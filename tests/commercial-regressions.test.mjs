@@ -111,3 +111,11 @@ test('correction buttons respect maker and finance-admin roles',()=>{
  assert.equal(c.batchCorrectionActions({id:'b',status:'DRAFT',created_by:'other'}),'');
  assert.equal(c.batchCorrectionActions({id:'b',status:'POSTED'}),'');c.profile.role='FINANCE_MANAGER';assert.ok(c.batchCorrectionActions({id:'b',status:'POSTED'}).includes('استرداد'));
 });
+test('failed attachment metadata save attempts to remove the newly uploaded orphan',async()=>{
+ const source=readFileSync(new URL('../operational-ui.js',import.meta.url),'utf8');
+ const start=source.indexOf(' async function saveAttachments('),end=source.indexOf(' window.openOperationAttachment=',start);assert.ok(start>=0&&end>start);
+ const removed=[];const ctx={session:{user:{id:'actor'}},crypto:webcrypto,fileHash:async()=> 'a'.repeat(64),supabase:{storage:{from:()=>({upload:async()=>({error:null}),remove:async paths=>{removed.push(...paths);return {error:null}}})},from:()=>({insert:async()=>({error:{message:'metadata denied'}})})}};
+ vm.runInNewContext(source.slice(start,end),ctx);
+ await assert.rejects(ctx.saveAttachments({files:[{name:'test.pdf',size:42,type:'application/pdf'}]},'transport_vehicles','test-id'),e=>e.message==='metadata denied');
+ assert.equal(removed.length,1);assert.ok(removed[0].startsWith('actor/transport_vehicles/test-id/'));
+});

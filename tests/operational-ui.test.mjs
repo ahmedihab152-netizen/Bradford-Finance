@@ -44,7 +44,7 @@ test('expenses remain one continuous ledger across academic years',()=>{
 });
 
 test('operational shell is loaded and public sign-up is removed at runtime',()=>{
- assert.match(html,/operational-ui\.js\?v=20261026-1/);
+ assert.match(html,/operational-ui\.js\?v=20261027-1/);
  assert.match(html,/window\.supabaseReady=new Promise/);
  assert.match(html,/@supabase\/supabase-js@2\.116\.0/);
  assert.match(ui,/await window\.supabaseReady/);

@@ -1,0 +1,40 @@
+-- Staging only: disposable metadata and rows, all changes rolled back.
+begin;
+create temp table attachment_results(test text,passed boolean,detail text);
+create temp table attachment_test(owner_id uuid,viewer_id uuid,vehicle_id uuid,foreign_vehicle uuid,own_path text,orphan_path text,foreign_path text);
+grant select,update on attachment_test to authenticated;
+grant insert,select on attachment_results to authenticated;
+select set_config('request.jwt.claims','{}',true);
+do $$declare u uuid:=gen_random_uuid();o uuid:=gen_random_uuid();v uuid;fv uuid;owner_uid uuid;begin
+ select user_id into owner_uid from public.user_profiles where role='OWNER' and active limit 1;
+ insert into auth.users(id,email,raw_user_meta_data) values(u,'audit-'||u||'@example.invalid','{}');
+ insert into public.erp_organizations(id,organization_code,organization_name) values(o,'AUDIT-'||o,'Disposable attachment tenant');
+ insert into public.transport_vehicles(vehicle_code,capacity,created_by,updated_by) values('AUDIT-'||gen_random_uuid(),10,owner_uid,owner_uid) returning id into v;
+ insert into public.transport_vehicles(vehicle_code,capacity,organization_id,created_by,updated_by) values('AUDIT-'||gen_random_uuid(),10,o,owner_uid,owner_uid) returning id into fv;
+ insert into attachment_test values(owner_uid,u,v,fv,owner_uid||'/transport_vehicles/'||v||'/proof.pdf',owner_uid||'/transport_vehicles/'||v||'/orphan.pdf',owner_uid||'/transport_vehicles/'||fv||'/foreign.pdf');
+end $$;
+select set_config('request.jwt.claims',jsonb_build_object('sub',owner_id,'role','authenticated','aal','aal2')::text,true) from attachment_test;
+update public.user_profiles set role='READ_ONLY',active=true where user_id=(select viewer_id from attachment_test);
+insert into public.erp_user_scopes(user_id,organization_id) select viewer_id,public.default_organization_id() from attachment_test;
+set local role authenticated;
+do $$declare t attachment_test%rowtype;attached uuid;cnt integer;begin
+ select * into t from attachment_test;
+ insert into storage.objects(bucket_id,name,owner_id) values('erp-private-documents',t.own_path,t.owner_id::text);
+ insert into public.operation_attachments(source_table,source_id,document_type,bucket_id,object_path,original_filename,mime_type,size_bytes,sha256,uploaded_by) values('transport_vehicles',t.vehicle_id,'SUPPORTING','erp-private-documents',t.own_path,'proof.pdf','application/pdf',42,repeat('a',64),t.owner_id) returning id into attached;
+ insert into attachment_results select 'owner_attach_and_read',count(*)=1,'authorized synthetic metadata is visible' from public.operation_attachments where id=attached;
+ insert into attachment_results select 'owner_linked_object_read',count(*)=1,'metadata-linked private object is visible to authorized source reader' from storage.objects where bucket_id='erp-private-documents' and name=t.own_path;
+ insert into attachment_results values('linked_object_cannot_be_deleted',not private.is_own_orphan_operation_object('erp-private-documents',t.own_path),'linked evidence is not eligible for orphan cleanup');
+ insert into storage.objects(bucket_id,name,owner_id) values('erp-private-documents',t.orphan_path,t.owner_id::text);
+ insert into attachment_results values('own_orphan_cleanup_allowed',private.is_own_orphan_operation_object('erp-private-documents',t.orphan_path),'unlinked object passes cleanup guard; Storage API deletion not exercised');
+ begin insert into storage.objects(bucket_id,name,owner_id) values('erp-private-documents',t.foreign_path,t.owner_id::text);insert into attachment_results values('cross_school_upload_denied',false,'foreign source accepted');exception when others then insert into attachment_results values('cross_school_upload_denied',true,sqlerrm);end;
+ begin insert into storage.objects(bucket_id,name,owner_id) values('erp-private-documents',t.owner_id||'/transport_vehicles/'||gen_random_uuid()||'/missing.pdf',t.owner_id::text);insert into attachment_results values('missing_source_upload_denied',false,'unknown record accepted');exception when others then insert into attachment_results values('missing_source_upload_denied',true,sqlerrm);end;
+ begin insert into public.operation_attachments(source_table,source_id,document_type,object_path,original_filename,mime_type,size_bytes,sha256,uploaded_by) values('transport_vehicles',t.vehicle_id,'SUPPORTING',t.owner_id||'/transport_vehicles/'||t.vehicle_id||'/absent.pdf','absent.pdf','application/pdf',42,repeat('b',64),t.owner_id);insert into attachment_results values('metadata_without_object_denied',false,'missing object accepted');exception when others then insert into attachment_results values('metadata_without_object_denied',true,sqlerrm);end;
+end $$;
+reset role;
+select set_config('request.jwt.claims',jsonb_build_object('sub',viewer_id,'role','authenticated','aal','aal1')::text,true) from attachment_test;
+set local role authenticated;
+insert into attachment_results select 'readonly_attachment_hidden',count(*)=0,'read-only user cannot see sensitive attachment metadata' from public.operation_attachments where source_id=(select vehicle_id from attachment_test);
+insert into attachment_results select 'readonly_object_hidden',count(*)=0,'read-only user cannot see private object' from storage.objects where bucket_id='erp-private-documents' and name=(select own_path from attachment_test);
+reset role;
+select jsonb_agg(to_jsonb(x)) results from attachment_results x;
+rollback;
