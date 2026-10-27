@@ -8,3 +8,5 @@ ios/App/DerivedData/
 .DS_Store
 
 supabase/.temp/
+staging-dist/
+.staging-test-credentials.txt
