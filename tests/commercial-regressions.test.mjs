@@ -133,3 +133,11 @@ test('IG receipt prevents double save and demands a bank account for noncash',as
  let calls=0,release,started;const ready=new Promise(r=>started=r);const h=igReceiptHarness(async(_name,p)=>{calls++;assert.equal(p.p_tenders[0].bank_account_id,'bank1');started();return new Promise(r=>release=r)});
  h.fields['#igPayMethod'].value='QNB';await h.submit();assert.equal(calls,0);h.fields['#igPayBank'].value='bank1';const first=h.submit();await ready;await h.submit();assert.equal(calls,1);release({data:'batch'});await first;
 });
+test('known rejected cashier validation clears the pending key, allowing corrected input',async()=>{
+ const storage=new Map();const h=cashierHarness(async()=>({error:{code:'P0001',message:'Payment exceeds outstanding'}}),storage);
+ await h.cashierSave(false);assert.equal(storage.size,0);
+});
+test('known rejected IG validation clears the pending key, allowing corrected input',async()=>{
+ const storage=new Map();const h=igReceiptHarness(async()=>({error:{code:'P0001',message:'IG payment exceeds outstanding fee'}}),storage);
+ await h.submit();assert.equal(storage.size,0);
+});

@@ -33,7 +33,7 @@
    if(pending&&pending.fingerprint!==fingerprint)throw new Error('نتيجة محاولة سابقة غير مؤكدة؛ أعد المحاولة بنفس البيانات أولًا لمنع تكرار الإيصال.');
    if(!pending){pending={key:crypto.randomUUID(),fingerprint};sessionStorage.setItem(storageKey,JSON.stringify(pending))}
    const r=await supabase.rpc('create_ig_exam_payment_batch',{p_account_id:account,p_transaction_date:date,p_idempotency_key:pending.key,p_lines:lines,p_tenders:[{method,amount_piasters:total,reference:reference||null,bank_account_id:method==='CASH'?null:bank}],p_notes:'IG exam fees'});
-   if(r.error)throw r.error;sessionStorage.removeItem(storageKey);closeM();uiToast('تم حفظ إيصال IG كمسودة؛ لا يؤثر ماليًا قبل الاعتماد.','success');await igFinance();
+   if(r.error){if(typeof r.error.code==='string'&&/^(22|23|42|P0)/.test(r.error.code)&&!String(r.error.message||'').includes('different request'))sessionStorage.removeItem(storageKey);throw r.error}sessionStorage.removeItem(storageKey);closeM();uiToast('تم حفظ إيصال IG كمسودة؛ لا يؤثر ماليًا قبل الاعتماد.','success');await igFinance();
   }catch(error){uiToast(error.message||'تعذر تحديد نتيجة الحفظ؛ أعد المحاولة بنفس البيانات.','error',8000)}
   finally{igSaving=false;if(button)button.disabled=false}
  });
