@@ -25,7 +25,7 @@ const sourceImports=readFileSync(new URL('../supabase/migrations/20261022173000_
 
 test('current student operations use 2026-2027 while historical and superseded accounts stay hidden',()=>{
  assert.match(html,/const STUDENT_YEAR='2026-2027'/);
- assert.match(html,/cashier\.js\?v=20261026-1/);
+ assert.match(html,/cashier\.js\?v=20261026-2/);
  assert.match(html,/student_accounts\(academic_year,source_meta,students/);
  assert.match(html,/source_meta\?\.superseded/);
  assert.match(html,/academic_year===STUDENT_YEAR/);
